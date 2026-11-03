@@ -1,0 +1,55 @@
+<UserControl x:Class="Tman.Pages.ConnectionsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Connections" Style="{StaticResource PageTitle}" />
+        <DockPanel Grid.Row="1" Margin="0,12,0,10">
+            <CheckBox x:Name="ResolveBox" DockPanel.Dock="Right" Content="Resolve host names" Margin="12,0,0,0" Click="Resolve_Click" />
+            <c:SearchBox x:Name="Search" Width="300" Placeholder="Search process, address or port" />
+            <ComboBox x:Name="KindFilter" Margin="10,0,0,0" MinWidth="140" SelectedIndex="0" SelectionChanged="KindFilter_SelectionChanged">
+                <ComboBoxItem Content="All" />
+                <ComboBoxItem Content="Established" />
+                <ComboBoxItem Content="Listening" />
+                <ComboBoxItem Content="TCP" />
+                <ComboBoxItem Content="UDP" />
+            </ComboBox>
+            <TextBlock x:Name="CountText" Margin="16,0,0,0" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+        </DockPanel>
+        <DataGrid x:Name="List" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Process" SortMemberPath="Process" Width="200">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <DockPanel VerticalAlignment="Center">
+                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Text="{Binding Process}" Style="{StaticResource CellText}" />
+                            </DockPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Protocol" Binding="{Binding Protocol}" Width="80" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Local address" Binding="{Binding LocalAddress}" Width="150" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Port" Binding="{Binding LocalPort}" Width="70" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Remote address" Binding="{Binding RemoteDisplay}" SortMemberPath="RemoteAddress" Width="*" MinWidth="180" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Port" Binding="{Binding RemotePortText}" SortMemberPath="RemotePort" Width="70" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="State" Binding="{Binding State}" Width="110" ElementStyle="{StaticResource CellText}" />
+            </DataGrid.Columns>
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="End process" Click="EndProcess_Click" />
+                    <MenuItem Header="Open file location" Click="OpenLocation_Click" />
+                    <Separator />
+                    <MenuItem Header="Copy remote address" Click="CopyRemote_Click" />
+                    <MenuItem Header="Copy row" Click="CopyRow_Click" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+        </DataGrid>
+    </Grid>
+</UserControl>

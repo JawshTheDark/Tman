@@ -1,0 +1,68 @@
+<UserControl x:Class="Tman.Pages.ServicesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Services" Style="{StaticResource PageTitle}" />
+        <DockPanel Grid.Row="1" Margin="0,12,0,10">
+            <Button DockPanel.Dock="Right" Content="Open Services" Margin="8,0,0,0" Click="OpenMmc_Click" />
+            <Button x:Name="RestartButton" DockPanel.Dock="Right" Content="Restart" Margin="8,0,0,0" IsEnabled="False" Click="Restart_Click" />
+            <Button x:Name="StopButton" DockPanel.Dock="Right" Content="Stop" Margin="8,0,0,0" IsEnabled="False" Click="Stop_Click" />
+            <Button x:Name="StartButton" DockPanel.Dock="Right" Content="Start" IsEnabled="False" Click="Start_Click" />
+            <c:SearchBox x:Name="Search" Width="300" Placeholder="Search services" />
+            <ComboBox x:Name="StateFilter" Margin="10,0,0,0" MinWidth="130" SelectedIndex="0" SelectionChanged="StateFilter_SelectionChanged">
+                <ComboBoxItem Content="All" />
+                <ComboBoxItem Content="Running" />
+                <ComboBoxItem Content="Stopped" />
+            </ComboBox>
+            <TextBlock x:Name="CountText" Margin="16,0,0,0" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+        </DockPanel>
+        <DataGrid x:Name="List" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                  SelectionChanged="List_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="180" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Display name" Binding="{Binding DisplayName}" Width="*" MinWidth="200" ElementStyle="{StaticResource CellText}" />
+                <DataGridTemplateColumn Header="Status" SortMemberPath="State" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding State}" Foreground="{Binding StateBrush}" Style="{StaticResource CellText}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Startup type" Binding="{Binding StartMode}" Width="110" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="PID" Binding="{Binding PidText}" SortMemberPath="Pid" Width="70" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Log on as" Binding="{Binding Account}" Width="160" ElementStyle="{StaticResource CellText}" />
+            </DataGrid.Columns>
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Start" Click="Start_Click" />
+                    <MenuItem Header="Stop" Click="Stop_Click" />
+                    <MenuItem Header="Restart" Click="Restart_Click" />
+                    <Separator />
+                    <MenuItem Header="Startup type">
+                        <MenuItem Header="Automatic" Tag="Automatic" Click="StartMode_Click" />
+                        <MenuItem Header="Manual" Tag="Manual" Click="StartMode_Click" />
+                        <MenuItem Header="Disabled" Tag="Disabled" Click="StartMode_Click" />
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem Header="Open file location" Click="OpenLocation_Click" />
+                    <MenuItem Header="Search online" Click="SearchOnline_Click" />
+                    <MenuItem Header="Copy name" Click="CopyName_Click" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+        </DataGrid>
+        <Border x:Name="DetailsPane" Grid.Row="3" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="14,10" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock x:Name="DetailTitle" FontWeight="SemiBold" FontSize="15" />
+                <TextBlock x:Name="DetailDesc" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextWrapping="Wrap" MaxHeight="60" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="DetailPath" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

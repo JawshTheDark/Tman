@@ -1,0 +1,47 @@
+<UserControl x:Class="Tman.Pages.InstalledAppsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Installed apps" Style="{StaticResource PageTitle}" />
+        <DockPanel Grid.Row="1" Margin="0,12,0,10">
+            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+            <Button x:Name="UninstallButton" DockPanel.Dock="Right" Content="Uninstall" IsEnabled="False" Click="Uninstall_Click" />
+            <c:SearchBox x:Name="Search" Width="300" Placeholder="Search apps or publishers" />
+            <TextBlock x:Name="CountText" Margin="16,0,0,0" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+        </DockPanel>
+        <DataGrid x:Name="List" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                  SelectionChanged="List_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Name" SortMemberPath="Name" Width="*" MinWidth="240">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <DockPanel VerticalAlignment="Center">
+                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource CellText}" />
+                            </DockPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="200" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="130" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Installed" Binding="{Binding InstalledText}" SortMemberPath="Installed" Width="100" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="90" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Scope" Binding="{Binding Scope}" Width="110" ElementStyle="{StaticResource CellText}" />
+            </DataGrid.Columns>
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Uninstall" Click="Uninstall_Click" />
+                    <MenuItem Header="Open install location" Click="OpenLocation_Click" />
+                    <MenuItem Header="Search online" Click="SearchOnline_Click" />
+                    <MenuItem Header="Copy uninstall command" Click="CopyUninstall_Click" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+        </DataGrid>
+    </Grid>
+</UserControl>
