@@ -13,7 +13,7 @@ using Tman.Pages;
 
 namespace Tman;
 
-/// <summary>Everything about one process: overview, threads, loaded modules, environment and open files.</summary>
+/// <summary>Everything about one process: overview, threads, loaded modules, environment, open files and wait chains.</summary>
 public sealed class ProcessDetailsWindow : Window
 {
     sealed class ThreadRow : ObservableObject
@@ -57,7 +57,12 @@ public sealed class ProcessDetailsWindow : Window
     readonly ObservableCollection<ModuleRow> _modules = new();
     readonly DataGrid _threadGrid = MakeGrid(), _moduleGrid = MakeGrid(), _envGrid = MakeGrid(), _fileGrid = MakeGrid();
     readonly TextBlock _threadNote = Note(), _moduleNote = Note(), _envNote = Note(), _fileNote = Note();
-    readonly TabItem _threadTab, _moduleTab, _envTab, _fileTab;
+    readonly TabItem _threadTab, _moduleTab, _envTab, _fileTab, _waitTab;
+    readonly StackPanel _waitChains = new();
+    readonly TextBlock _waitTitle = new() { FontWeight = FontWeights.Bold, FontSize = 15, TextWrapping = TextWrapping.Wrap };
+    readonly TextBlock _waitText = new() { Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
+    CancellationTokenSource? _waitCancel;
+    string _waitReport = "";
     readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(2) };
     readonly TextBlock _signer = new() { Margin = new Thickness(0, 3, 0, 0) };
     List<ModuleInfo>? _moduleList;
@@ -66,7 +71,7 @@ public sealed class ProcessDetailsWindow : Window
     bool _modulesShown, _envLoaded, _filesLoaded, _refreshing;
     string? _currentDir;
 
-    public ProcessDetailsWindow(ProcessItem p)
+    public ProcessDetailsWindow(ProcessItem p, bool openWaitChain = false)
     {
         _p = p;
         Title = $"{p.Name} (PID {p.Pid})";
@@ -81,9 +86,11 @@ public sealed class ProcessDetailsWindow : Window
         _moduleTab = Tab("Modules", _moduleGrid, _moduleNote);
         _envTab = Tab("Environment", _envGrid, _envNote);
         _fileTab = Tab("Open files", _fileGrid, _fileNote);
+        _waitTab = WaitTab();
         _tabs.Items.Add(new TabItem { Header = "General", Content = new ScrollViewer { Content = _general, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } });
-        foreach (var t in new[] { _threadTab, _moduleTab, _envTab, _fileTab }) _tabs.Items.Add(t);
+        foreach (var t in new[] { _threadTab, _moduleTab, _envTab, _fileTab, _waitTab }) _tabs.Items.Add(t);
         _tabs.SelectionChanged += (s, e) => { if (e.OriginalSource == _tabs) OnTabChanged(); };
+        if (openWaitChain) _tabs.SelectedItem = _waitTab;
 
         SetupThreadGrid();
         SetupModuleGrid();
@@ -98,7 +105,11 @@ public sealed class ProcessDetailsWindow : Window
         Content = root;
 
         _timer.Tick += (_, _) => RefreshThreads();
-        Closed += (_, _) => _timer.Stop();
+        Closed += (_, _) =>
+        {
+            _timer.Stop();
+            _waitCancel?.Cancel();
+        };
         Loaded += async (_, _) =>
         {
             // Modules feed thread start addresses and the General tab, so fetch them up front.
@@ -415,13 +426,135 @@ public sealed class ProcessDetailsWindow : Window
         _fileNote.Text = $"Files and folders this process has open right now (checked in {scan.Elapsed.TotalSeconds:0.0} s). Loaded DLLs are on the Modules tab.";
     }
 
+    // ---- Wait chain ----
+
+    TabItem WaitTab()
+    {
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
+        buttons.Children.Add(Button("Check again", ShowWaitChain));
+        buttons.Children.Add(Button("Copy report", () => Ui.Copy(_waitReport)));
+        DockPanel.SetDock(buttons, Dock.Right);
+
+        var text = new StackPanel();
+        text.Children.Add(_waitTitle);
+        text.Children.Add(_waitText);
+        var top = new DockPanel { Margin = new Thickness(4, 10, 4, 12) };
+        top.Children.Add(buttons);
+        top.Children.Add(text);
+        DockPanel.SetDock(top, Dock.Top);
+
+        var panel = new DockPanel();
+        panel.Children.Add(top);
+        panel.Children.Add(new ScrollViewer { Content = _waitChains, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+        return new TabItem { Header = "Wait chain", Content = panel };
+    }
+
+    void SetWaitSummary(string brush, string title, string text)
+    {
+        _waitTitle.Foreground = (Brush)FindResource(brush);
+        _waitTitle.Text = title;
+        _waitText.Foreground = (Brush)FindResource("SubtleBrush");
+        _waitText.Text = text;
+        _waitReport = $"{_p.Name} (PID {_p.Pid}): {title}\n{text}";
+    }
+
+    async void ShowWaitChain()
+    {
+        _waitCancel?.Cancel();
+        var cancel = _waitCancel = new CancellationTokenSource();
+        _waitChains.Children.Clear();
+        SetWaitSummary("SubtleBrush", "Checking threads…", "");
+        var names = new Dictionary<int, string>();
+        foreach (var s in SystemMonitor.Instance.Latest?.Processes ?? new List<ProcSample>()) names[s.Pid] = s.Name;
+        string NameOf(int pid) => names.GetValueOrDefault(pid, "an unknown process");
+        var progress = new Progress<(int Done, int Total)>(p =>
+        {
+            if (!cancel.IsCancellationRequested) _waitText.Text = $"{p.Done} of {p.Total} waiting threads checked.";
+        });
+        try
+        {
+            var (report, hung) = await Task.Run(() =>
+                (WaitChains.Analyze(_p.Pid, _p.CreateTime, NameOf, progress, cancel.Token), HungWindows.Scan().Contains(_p.Pid)));
+            if (!cancel.IsCancellationRequested) ShowWaitReport(report, hung);
+        }
+        catch (OperationCanceledException)
+        {
+            // The tab or window closed, or Check again started over.
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write(ex);
+            SetWaitSummary("WarnBrush", "Couldn't check this process", ex.Message);
+        }
+    }
+
+    void ShowWaitReport(WaitChainReport? r, bool hung)
+    {
+        if (r == null)
+        {
+            SetWaitSummary("SubtleBrush", "This process has exited.", "");
+            return;
+        }
+        string adminTip = MainWindow.IsAdmin ? "" : " Restart Tman as administrator to inspect processes you don't own.";
+        if (r.Checked > 0 && r.Denied >= r.Checked)
+        {
+            SetWaitSummary("WarnBrush", "Windows won't show this process's threads", $"Tman can't tell what they're waiting for.{adminTip}");
+            return;
+        }
+
+        string partial = r.Denied > 0 ? $" Windows wouldn't show {r.Denied} of its threads.{adminTip}" : "";
+        int blocked = r.Blocked.Count;
+        if (r.Deadlocked)
+            SetWaitSummary("BadBrush", "Deadlock: these threads are stuck for good",
+                "They're each waiting for something another one holds, so none of them can ever continue. The app won't recover by itself, so the only way out is to end it. Unsaved work in it will be lost." + partial);
+        else if (blocked > 0)
+            SetWaitSummary(hung ? "BadBrush" : "WarnBrush", hung ? "This app isn't responding" : $"{blocked} {(blocked == 1 ? "thread is" : "threads are")} waiting",
+                (hung ? "The last item in a chain below is the likely reason." : "A short wait like this is normal. If the app has stopped responding, the last item in a chain is what it's stuck on.") + partial);
+        else if (hung)
+            SetWaitSummary("BadBrush", "This app isn't responding, but nothing is blocking it",
+                "No thread is waiting on anything Windows can trace, so it may be busy in a long task, or waiting for a disk or a driver." + partial);
+        else
+            SetWaitSummary("GoodBrush", "Nothing is blocked", $"All {r.Threads} threads are running or idle, waiting for work." + partial);
+
+        foreach (var b in r.Blocked)
+        {
+            _waitChains.Children.Add(ChainCard(b));
+            _waitReport += $"\n\n{ChainTitle(b)} ({ChainState(b)})\n" + string.Join("\n", b.Steps.Select(s => "  " + s));
+        }
+    }
+
+    static string ChainTitle(BlockedThread b) => b.Name.Length > 0 ? $"Thread {b.Tid}: {b.Name}" : $"Thread {b.Tid}";
+
+    static string ChainState(BlockedThread b)
+    {
+        string waited = b.Waited > TimeSpan.Zero ? $"for {Fmt.Span(b.Waited)}" : "";
+        return b.Deadlock ? $"Deadlocked {waited}".TrimEnd() : $"Waiting {waited}".TrimEnd();
+    }
+
+    FrameworkElement ChainCard(BlockedThread b)
+    {
+        var state = new TextBlock { Text = ChainState(b), Foreground = (Brush)FindResource(b.Deadlock ? "BadBrush" : "WarnBrush"), Margin = new Thickness(12, 0, 0, 0) };
+        DockPanel.SetDock(state, Dock.Right);
+        var header = new DockPanel();
+        header.Children.Add(state);
+        header.Children.Add(new TextBlock { Text = ChainTitle(b), FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+
+        var body = new StackPanel();
+        body.Children.Add(header);
+        foreach (var step in b.Steps)
+            body.Children.Add(new TextBlock { Text = step, Style = (Style)FindResource("Subtle"), Margin = new Thickness(14, 4, 0, 0), TextWrapping = TextWrapping.Wrap });
+        return new Border { Style = (Style)FindResource("Card"), Padding = new Thickness(12, 8, 12, 10), Margin = new Thickness(4, 0, 4, 8), Child = body };
+    }
+
     void OnTabChanged()
     {
         _timer.Stop();
+        _waitCancel?.Cancel();
         if (_tabs.SelectedItem == _threadTab) RefreshThreads();
         else if (_tabs.SelectedItem == _moduleTab) ShowModules();
         else if (_tabs.SelectedItem == _fileTab) ShowFiles();
         else if (_tabs.SelectedItem == _envTab && !_envLoaded) _envNote.Text = "Loading…";
+        else if (_tabs.SelectedItem == _waitTab) ShowWaitChain();
     }
 
     /// <summary>Dev aid for --snap: switch to a tab by index.</summary>

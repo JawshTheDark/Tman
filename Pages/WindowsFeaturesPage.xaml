@@ -1,0 +1,81 @@
+<UserControl x:Class="Tman.Pages.WindowsFeaturesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls"
+             xmlns:p="clr-namespace:Tman.Pages">
+    <UserControl.Resources>
+        <DataTemplate x:Key="FeatureTemplate">
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource CardHeading}" />
+                    <TextBlock Text="{Binding Description}" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Warning}" Foreground="{StaticResource WarnBrush}" TextWrapping="Wrap"
+                               Visibility="{Binding HasWarning, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding StateText}" Foreground="{Binding StateBrush}" VerticalAlignment="Center" Margin="12,0" />
+                <Button Grid.Column="2" Content="{Binding ActionText}" Tag="{Binding}" MinWidth="84" VerticalAlignment="Center"
+                        IsEnabled="{Binding CanAct}" Visibility="{Binding HasAction, Converter={StaticResource BoolToVis}}" Click="Action_Click" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition MinHeight="120" />
+            <RowDefinition x:Name="PanelRow" Height="Auto" MaxHeight="260" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Windows features" Style="{StaticResource PageTitle}" />
+        <c:AdminNote Grid.Row="1" Text="You can see every feature, but turning one on or off needs administrator rights. So does exact OpenSSH install state; without it, Tman checks for the program files instead." />
+        <DockPanel Grid.Row="2" Style="{StaticResource Toolbar}">
+            <Button x:Name="RefreshButton" DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+            <c:SearchBox x:Name="Search" Width="300" Placeholder="Search features" />
+            <TextBlock x:Name="CountText" Style="{StaticResource ToolbarCount}" />
+        </DockPanel>
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Focusable="False">
+            <StackPanel Margin="0,0,12,0">
+                <TextBlock x:Name="EmptyText" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
+                <!-- Each feature row ends with 10 of space, so the lists pull that back in after their last row. -->
+                <Border x:Name="CommonCard" Style="{StaticResource Card}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="COMMON FEATURES" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
+                        <ItemsControl x:Name="CommonList" Focusable="False" Margin="0,0,0,-10" ItemTemplate="{StaticResource FeatureTemplate}" />
+                    </StackPanel>
+                </Border>
+                <Border x:Name="SshCard" Style="{StaticResource Card}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="OPENSSH" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
+                        <ItemsControl x:Name="SshList" Focusable="False" ItemTemplate="{StaticResource FeatureTemplate}" />
+                        <Grid Margin="0,2,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,12,0">
+                                <TextBlock Text="sshd service" Style="{StaticResource StatLabel}" />
+                                <TextBlock x:Name="ServiceText" TextWrapping="Wrap" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Firewall rule" Style="{StaticResource StatLabel}" />
+                                <TextBlock x:Name="FirewallText" TextWrapping="Wrap" Margin="0,2,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <Border x:Name="OtherCard" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="ALL OTHER FEATURES" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
+                        <ItemsControl x:Name="OtherList" Focusable="False" Margin="0,0,0,-10" ItemTemplate="{StaticResource FeatureTemplate}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+        <p:JobOutputPanel x:Name="Panel" Grid.Row="4" Margin="0,10,0,0" Visibility="Collapsed" />
+    </Grid>
+</UserControl>

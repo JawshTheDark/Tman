@@ -1,0 +1,120 @@
+<UserControl x:Class="Tman.Pages.MemoryMapPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" Padding="0,0,12,0">
+        <StackPanel>
+            <DockPanel>
+                <Button x:Name="EmptyButton" DockPanel.Dock="Right" Content="Empty standby list" VerticalAlignment="Center" Margin="8,0,0,0"
+                        ToolTipService.ShowOnDisabled="True" Click="Empty_Click" />
+                <TextBlock Text="Memory map" Style="{StaticResource PageTitle}" />
+            </DockPanel>
+            <TextBlock x:Name="Subtitle" Style="{StaticResource PageSubtitle}" />
+            <c:AdminNote Text="You can see everything here. Emptying the standby list is the one action that needs administrator rights." />
+
+            <c:NeonPanel Header="Physical memory" Accent="{StaticResource MemBrush}" Style="{StaticResource PageBody}">
+                <StackPanel>
+                    <Grid x:Name="Bar" Height="26" Margin="0,2,0,12" />
+                    <ItemsControl x:Name="Legend">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="18" />
+                                        <ColumnDefinition Width="128" />
+                                        <ColumnDefinition Width="74" />
+                                        <ColumnDefinition Width="52" />
+                                        <ColumnDefinition />
+                                    </Grid.ColumnDefinitions>
+                                    <Rectangle Width="10" Height="10" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" Opacity="{Binding Opacity}"
+                                               HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,3,0,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="2" Text="{Binding SizeText}" TextAlignment="Right" Margin="0,0,10,0" />
+                                    <TextBlock Grid.Column="3" Text="{Binding PercentText}" TextAlignment="Right" Margin="0,0,14,0" Style="{StaticResource Subtle}" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Meaning}" TextWrapping="Wrap" Style="{StaticResource Subtle}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </c:NeonPanel>
+
+            <UniformGrid x:Name="Tiles" Columns="4" Margin="0,0,-10,0">
+                <Border Style="{StaticResource Card}" Margin="0,10,10,0">
+                    <StackPanel>
+                        <TextBlock Text="Commit used" Style="{StaticResource StatLabel}" />
+                        <TextBlock x:Name="CommitValue" Style="{StaticResource StatBig}" />
+                        <TextBlock x:Name="CommitSub" FontSize="12" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,10,10,0">
+                    <StackPanel>
+                        <TextBlock Text="Paged pool" Style="{StaticResource StatLabel}" />
+                        <TextBlock x:Name="PagedValue" Style="{StaticResource StatBig}" />
+                        <TextBlock Text="Kernel memory that can move to disk" FontSize="12" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,10,10,0">
+                    <StackPanel>
+                        <TextBlock Text="Non-paged pool" Style="{StaticResource StatLabel}" />
+                        <TextBlock x:Name="NonPagedValue" Style="{StaticResource StatBig}" />
+                        <TextBlock Text="Kernel memory that must stay in RAM" FontSize="12" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,10,10,0">
+                    <StackPanel>
+                        <TextBlock Text="File cache" Style="{StaticResource StatLabel}" />
+                        <TextBlock x:Name="CacheValue" Style="{StaticResource StatBig}" />
+                        <TextBlock Text="Files being read and written right now" FontSize="12" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <c:NeonPanel Header="Standby by priority" Accent="{StaticResource CpuBrush}" Margin="0,10,0,0">
+                <StackPanel>
+                    <TextBlock x:Name="StandbyNote" Margin="0,0,0,10" FontSize="11" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+                    <ItemsControl x:Name="StandbyLevels">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Label}" Style="{StaticResource StatLabel}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding SizeText}" Margin="0,2,0,4" TextTrimming="CharacterEllipsis" />
+                                    <c:UsageBar Value="{Binding Share}" Fill="{StaticResource CpuBrush}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </c:NeonPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,10,0,0">
+                <StackPanel>
+                    <TextBlock Text="TOP POOL TAGS" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
+                    <TextBlock x:Name="PoolNote" Margin="0,0,0,8" FontSize="11" Style="{StaticResource Subtle}" TextWrapping="Wrap"
+                               Text="Windows and drivers label kernel memory with a four-letter tag. A tag that keeps growing points at a driver leaking memory." />
+                    <DataGrid x:Name="Tags" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Tag" Binding="{Binding Tag}" Width="60" MinWidth="60" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Total" Binding="{Binding TotalText}" SortMemberPath="Total" Width="76" MinWidth="76" ElementStyle="{StaticResource NumText}" />
+                            <DataGridTextColumn Header="Non-paged" Binding="{Binding NonPagedText}" SortMemberPath="NonPaged" Width="90" MinWidth="90" ElementStyle="{StaticResource NumText}" />
+                            <DataGridTextColumn Header="Paged" Binding="{Binding PagedText}" SortMemberPath="Paged" Width="76" MinWidth="76" ElementStyle="{StaticResource NumText}" />
+                            <DataGridTextColumn Header="Blocks" Binding="{Binding BlocksText}" SortMemberPath="Blocks" Width="76" MinWidth="76" ElementStyle="{StaticResource NumText}" />
+                            <DataGridTextColumn Header="What it is" Binding="{Binding Meaning}" Width="*" MinWidth="130" ElementStyle="{StaticResource CellText}" />
+                        </DataGrid.Columns>
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Search online" Click="SearchTag_Click" />
+                                <MenuItem Header="Copy details" Click="CopyTag_Click" />
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

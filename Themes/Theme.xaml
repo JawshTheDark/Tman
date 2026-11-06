@@ -35,6 +35,7 @@
     <SolidColorBrush x:Key="CardStrokeBrush" Color="#232A33" />
     <SolidColorBrush x:Key="SubtleBrush" Color="#8C96A3" />
     <SolidColorBrush x:Key="LabelBrush" Color="#7FA8C4" />
+    <SolidColorBrush x:Key="TitleBrush" Color="#F2F5F8" />
     <SolidColorBrush x:Key="NavHoverBrush" Color="#121A22" />
     <LinearGradientBrush x:Key="NavSelectedBrush" StartPoint="0,0" EndPoint="1,0">
         <GradientStop Color="#403FC8FF" Offset="0" />
@@ -55,6 +56,51 @@
     </Style>
     <Style x:Key="Subtle" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource SubtleBrush}" />
+    </Style>
+
+    <!-- Page layout. Every page stacks the same way: title, one line about the page, the admin note, a toolbar, then
+         content. Each block brings its own space above it, so nothing shifts when the admin note is hidden. -->
+    <Style x:Key="PageSubtitle" TargetType="TextBlock" BasedOn="{StaticResource Subtle}">
+        <Setter Property="Margin" Value="0,2,0,0" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <!-- The row of search, filters and actions under the title. Search comes first, actions sit on the right, Refresh last. -->
+    <Style x:Key="Toolbar" TargetType="FrameworkElement">
+        <Setter Property="Margin" Value="0,12,0,10" />
+    </Style>
+    <!-- "310 services · 120 running", after the filters -->
+    <Style x:Key="ToolbarCount" TargetType="TextBlock" BasedOn="{StaticResource Subtle}">
+        <Setter Property="Margin" Value="16,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <!-- Buttons for the selected row, directly above the list they act on -->
+    <Style x:Key="ActionRow" TargetType="FrameworkElement">
+        <Setter Property="Margin" Value="0,0,0,2" />
+    </Style>
+    <!-- First block of content on a page with no toolbar -->
+    <Style x:Key="PageBody" TargetType="FrameworkElement">
+        <Setter Property="Margin" Value="0,12,0,0" />
+    </Style>
+    <!-- What a list says when it has nothing to show -->
+    <Style x:Key="EmptyText" TargetType="TextBlock" BasedOn="{StaticResource Subtle}">
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Margin" Value="30,50,30,0" />
+    </Style>
+    <!-- The bright first line of a card, above a Subtle line of detail -->
+    <Style x:Key="CardHeading" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource TitleBrush}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <!-- The large figure on a stat tile, under a StatLabel -->
+    <Style x:Key="StatBig" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
     <Style x:Key="CardTitle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12" />
@@ -96,6 +142,10 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="5" />
         <Setter Property="Padding" Value="16" />
+    </Style>
+    <!-- A card holding a line or two: status strips, detail panes, list rows -->
+    <Style x:Key="SlimCard" TargetType="Border" BasedOn="{StaticResource Card}">
+        <Setter Property="Padding" Value="14,10" />
     </Style>
 
     <!-- Sidebar navigation item -->

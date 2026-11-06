@@ -1,0 +1,64 @@
+<UserControl x:Class="Tman.Pages.SecurityPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top">
+            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" VerticalAlignment="Center" Click="Refresh_Click" />
+            <Button DockPanel.Dock="Right" Content="Open Windows Security" Margin="8,0,0,0" VerticalAlignment="Center" Click="OpenSecurity_Click" />
+            <TextBlock Text="Security" Style="{StaticResource PageTitle}" />
+        </DockPanel>
+        <TextBlock x:Name="Summary" DockPanel.Dock="Top" Style="{StaticResource PageSubtitle}" />
+        <c:AdminNote DockPanel.Dock="Top" Text="With administrator rights, BitLocker status is read from the drive itself. Without them, Tman shows what File Explorer reports." />
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0" Padding="0,0,12,0">
+            <ItemsControl x:Name="Rows" Focusable="False">
+                <ItemsControl.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.ContainerStyle>
+                            <Style TargetType="GroupItem">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="GroupItem">
+                                            <StackPanel Margin="0,0,0,6">
+                                                <ContentPresenter />
+                                                <ItemsPresenter />
+                                            </StackPanel>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </GroupStyle.ContainerStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ItemsControl.GroupStyle>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource SlimCard}" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="82" />
+                                    <ColumnDefinition />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding StateText}" Foreground="{Binding StateBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock TextWrapping="Wrap">
+                                        <Run Text="{Binding Item.Name, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
+                                        <Run Text=" " />
+                                        <Run Text="{Binding Item.Value, Mode=OneWay}" Foreground="{Binding StateBrush}" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Item.Meaning}" Style="{StaticResource Subtle}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Button Grid.Column="2" Content="Open" Tag="{Binding Item.Open}" VerticalAlignment="Center" Visibility="{Binding OpenVisibility}" Click="Open_Click" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

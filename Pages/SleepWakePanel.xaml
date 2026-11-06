@@ -1,0 +1,84 @@
+<UserControl x:Class="Tman.Pages.SleepWakePanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <StackPanel>
+        <c:AdminNote Margin="0,0,12,12" Text="Wake timers and what's keeping the PC awake can only be read as administrator." />
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}" Margin="0,0,12,12">
+                <StackPanel>
+                    <TextBlock Text="Last wake" Style="{StaticResource CardTitle}" Margin="0,0,0,8" />
+                    <TextBlock x:Name="WakeSource" Text="Loading…" Style="{StaticResource CardHeading}" FontSize="16" TextWrapping="Wrap" />
+                    <TextBlock x:Name="WakeWhen" Margin="0,2,0,0" TextWrapping="Wrap" Style="{StaticResource Subtle}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,12,12">
+                <StackPanel>
+                    <TextBlock Text="What's keeping the PC awake" Style="{StaticResource CardTitle}" Margin="0,0,0,8" />
+                    <StackPanel x:Name="AwakeList" />
+                </StackPanel>
+            </Border>
+        </Grid>
+        <Border Style="{StaticResource Card}" Margin="0,0,12,12">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,8">
+                    <TextBlock x:Name="HistoryNote" DockPanel.Dock="Right" FontSize="12" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+                    <TextBlock Text="Sleep and wake history" Style="{StaticResource CardTitle}" />
+                </DockPanel>
+                <Grid x:Name="HistoryHeader" Margin="0,0,0,4" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="3*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="WENT TO SLEEP" Style="{StaticResource PanelLabel}" />
+                    <TextBlock Grid.Column="1" Text="WOKE" Style="{StaticResource PanelLabel}" />
+                    <TextBlock Grid.Column="2" Text="ASLEEP FOR" Style="{StaticResource PanelLabel}" />
+                    <TextBlock Grid.Column="3" Text="WOKEN BY" Style="{StaticResource PanelLabel}" />
+                </Grid>
+                <ItemsControl x:Name="History">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding SleptText}" Style="{StaticResource CellText}" />
+                                <TextBlock Grid.Column="1" Text="{Binding WokeText}" Style="{StaticResource CellText}" />
+                                <TextBlock Grid.Column="2" Text="{Binding AsleepText}" Style="{StaticResource CellText}" />
+                                <TextBlock Grid.Column="3" Text="{Binding Source}" ToolTip="{Binding Source}" Style="{StaticResource CellText}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock x:Name="HistoryEmpty" TextWrapping="Wrap" Style="{StaticResource Subtle}" Visibility="Collapsed" />
+            </StackPanel>
+        </Border>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}" Margin="0,0,12,12">
+                <StackPanel>
+                    <TextBlock Text="Wake timers" Style="{StaticResource CardTitle}" Margin="0,0,0,8" />
+                    <StackPanel x:Name="TimerList" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,12,12">
+                <StackPanel>
+                    <TextBlock Text="Devices that can wake this PC" Style="{StaticResource CardTitle}" Margin="0,0,0,8" />
+                    <StackPanel x:Name="DeviceList" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </StackPanel>
+</UserControl>

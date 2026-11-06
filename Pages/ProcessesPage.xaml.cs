@@ -17,6 +17,7 @@ public partial class ProcessesPage : UserControl, IPage
     readonly Dictionary<(int, long), ProcessItem> _map = new();
     readonly ListCollectionView _view;
     string _filter = "";
+    string? _networkError;
     bool _visible;
 
     public ProcessesPage()
@@ -51,17 +52,40 @@ public partial class ProcessesPage : UserControl, IPage
         };
         SystemMonitor.Instance.Updated += OnUpdated;
         Signatures.Verified += OnSignatureVerified;
+        Application.Current.SessionEnding += (_, _) => EtwTrace.StopAllNow();
     }
 
     public void OnShown()
     {
         _visible = true;
+        HungWindows.Watching = true;
+        UpdateNetworkTrace();
         if (SystemMonitor.Instance.Latest is { } s) OnUpdated(s);
     }
 
-    public void OnHidden() => _visible = false;
+    public void OnHidden()
+    {
+        _visible = false;
+        HungWindows.Watching = false;
+        UpdateNetworkTrace();
+    }
 
     public void FocusSearch() => Search.FocusBox();
+
+    /// <summary>The trace costs something, so it runs only while someone can see the column it feeds.</summary>
+    void UpdateNetworkTrace() =>
+        ProcessNetwork.SetWanted(_visible && MainWindow.IsAdmin && NetworkColumn.Visibility == Visibility.Visible);
+
+    void ShowNetworkTip()
+    {
+        _networkError = ProcessNetwork.Error;
+        string tip = !MainWindow.IsAdmin
+            ? "Empty for a standard user. Windows can only report network use per process through a kernel trace, and only administrators can start one. Restart Tman as administrator to fill this in."
+            : _networkError != null
+                ? $"Empty because the network trace didn't start. {_networkError}"
+                : "Sent plus received, per process. Tman runs a network trace only while this column is visible.";
+        NetworkColumn.HeaderStyle = new Style(typeof(DataGridColumnHeader), List.ColumnHeaderStyle) { Setters = { new Setter(ToolTipProperty, tip) } };
+    }
 
     bool Matches(ProcessItem p) =>
         _filter.Length == 0
@@ -103,11 +127,16 @@ public partial class ProcessesPage : UserControl, IPage
                 _map.Remove(key);
             }
         }
+        if (ProcessNetwork.Error != _networkError) ShowNetworkTip();
         UpdateCount();
     }
 
-    void UpdateCount() =>
-        CountText.Text = _filter.Length == 0 ? $"{_items.Count} processes" : $"{_view.Count} of {_items.Count} processes";
+    void UpdateCount()
+    {
+        string count = _filter.Length == 0 ? $"{_items.Count} processes" : $"{_view.Count} of {_items.Count} processes";
+        int hung = _items.Count(i => i.Hung);
+        CountText.Text = hung > 0 ? $"{count}  ·  {hung} not responding" : count;
+    }
 
     // ---- Column chooser (right-click a header) ----
 
@@ -119,11 +148,20 @@ public partial class ProcessesPage : UserControl, IPage
         {
             var header = (string)col.Header;
             if (header == "Name") continue;
-            if (hidden.Contains(header)) col.Visibility = Visibility.Collapsed;
-            var item = new MenuItem { Header = header, IsCheckable = true, IsChecked = col.Visibility == Visibility.Visible };
+            bool isNetwork = col == NetworkColumn;
+            // The Network column has nothing to show without admin, so it starts hidden there but stays on the menu.
+            bool show = isNetwork ? Settings.Current.ShowNetworkColumn ?? MainWindow.IsAdmin : !hidden.Contains(header);
+            if (!show) col.Visibility = Visibility.Collapsed;
+            var item = new MenuItem { Header = header, IsCheckable = true, IsChecked = show };
             item.Click += (_, _) =>
             {
                 col.Visibility = item.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+                if (isNetwork)
+                {
+                    Settings.Current.ShowNetworkColumn = item.IsChecked;
+                    UpdateNetworkTrace();
+                    return;
+                }
                 hidden.Remove(header);
                 if (!item.IsChecked) hidden.Add(header);
                 if (col == SignerColumn) QueueSignatures();
@@ -134,6 +172,7 @@ public partial class ProcessesPage : UserControl, IPage
         var style = new Style(typeof(DataGridColumnHeader), baseStyle);
         style.Setters.Add(new Setter(ContextMenuProperty, menu));
         List.ColumnHeaderStyle = style;
+        ShowNetworkTip();
     }
 
     // ---- Selection / details ----
@@ -173,6 +212,11 @@ public partial class ProcessesPage : UserControl, IPage
     void ShowDetails()
     {
         if (List.SelectedItem is ProcessItem p) new ProcessDetailsWindow(p) { Owner = Window.GetWindow(this) }.Show();
+    }
+
+    void WaitChain_Click(object sender, RoutedEventArgs e)
+    {
+        if (List.SelectedItem is ProcessItem p) new ProcessDetailsWindow(p, openWaitChain: true) { Owner = Window.GetWindow(this) }.Show();
     }
 
     void Affinity_Click(object sender, RoutedEventArgs e)

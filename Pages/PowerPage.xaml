@@ -1,7 +1,8 @@
 <UserControl x:Class="Tman.Pages.PowerPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:c="clr-namespace:Tman.Controls">
+             xmlns:c="clr-namespace:Tman.Controls"
+             xmlns:p="clr-namespace:Tman.Pages">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
         <StackPanel>
             <TextBlock Text="Power &amp; frequency" Style="{StaticResource PageTitle}" />
@@ -95,6 +96,8 @@
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <p:SleepWakePanel x:Name="SleepWake" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -117,10 +117,14 @@ internal sealed class Sampler
 
         // Processes
         var procs = _procs.Collect(elapsed100ns);
+        var netRates = ProcessNetwork.TakeRates(seconds);
+        var hung = HungWindows.Watching ? HungWindows.Scan() : null;
         var alive = new HashSet<(int, long)>();
         foreach (var p in procs)
         {
             p.Gpu = Math.Min(100, pidGpu.GetValueOrDefault(p.Pid));
+            if (netRates != null) p.NetBps = netRates.GetValueOrDefault(p.Pid);
+            if (hung != null) p.Hung = hung.Contains(p.Pid);
             p.Details = ProcessInfo.Get(p.Pid, p.CreateTime, p.Name);
             alive.Add((p.Pid, p.CreateTime));
         }

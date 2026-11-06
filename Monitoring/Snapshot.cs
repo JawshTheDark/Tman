@@ -19,6 +19,10 @@ public sealed class ProcSample
     public double IoBps;
     public double Gpu;
     public bool Suspended;
+    /// <summary>A top-level window of this process has stopped responding. Only filled in while the Processes page is open.</summary>
+    public bool Hung;
+    /// <summary>Sent plus received, in bytes per second. Negative while no network trace is running.</summary>
+    public double NetBps = -1;
     /// <summary>Lifetime user + kernel CPU time, in 100 ns units.</summary>
     public long CpuTime;
     /// <summary>Lifetime read + write transfer, in bytes.</summary>

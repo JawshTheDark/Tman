@@ -1,0 +1,107 @@
+<UserControl x:Class="Tman.Pages.HyperVPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls"
+             xmlns:p="clr-namespace:Tman.Pages">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition MinHeight="214" />
+            <RowDefinition x:Name="PanelRow" Height="Auto" MaxHeight="220" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Hyper-V" Style="{StaticResource PageTitle}" />
+
+        <c:AdminNote x:Name="Note" Grid.Row="1"
+                     Text="Managing virtual machines needs administrator rights or membership of the Hyper-V Administrators group. If you were just added to that group, sign out and back in first." />
+
+        <Border x:Name="StatusCard" Grid.Row="2" Style="{StaticResource SlimCard}" Margin="0,10,0,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <Button x:Name="FeaturesButton" Content="Open Windows features" Visibility="Collapsed" Click="Features_Click" />
+                    <Button x:Name="ServicesButton" Content="Open Services" Visibility="Collapsed" Click="Services_Click" />
+                </StackPanel>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusTitle" Text="Checking for Hyper-V…" Style="{StaticResource CardHeading}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="StatusText" Style="{StaticResource Subtle}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <DockPanel Grid.Row="3" Style="{StaticResource Toolbar}">
+            <Button x:Name="RefreshButton" DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+            <Button x:Name="NewButton" DockPanel.Dock="Right" Content="New VM" Margin="8,0,0,0" Visibility="Collapsed" Click="New_Click" />
+            <Button x:Name="HideOutputButton" DockPanel.Dock="Right" Content="Hide output" Margin="8,0,0,0" Visibility="Collapsed" Click="HideOutput_Click"
+                    ToolTip="Makes room for the lists." />
+            <TextBlock x:Name="CountText" Style="{StaticResource ToolbarCount}" Margin="0" />
+        </DockPanel>
+
+        <Grid x:Name="Body" Grid.Row="4" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="3*" MinHeight="88" />
+                <RowDefinition Height="2*" MinHeight="88" />
+            </Grid.RowDefinitions>
+            <WrapPanel Style="{StaticResource ActionRow}">
+                <Button x:Name="ConsoleButton" Content="Open console" Margin="0,0,8,8" IsEnabled="False" Click="Console_Click"
+                        ToolTip="Opens this VM's screen in Hyper-V's console window. Double-clicking a VM does the same." />
+                <Button x:Name="StartButton" Content="Start" Margin="0,0,8,8" IsEnabled="False" Click="Start_Click" />
+                <Button x:Name="ShutDownButton" Content="Shut down" Margin="0,0,8,8" IsEnabled="False" Click="ShutDown_Click"
+                        ToolTip="Asks the system inside the VM to shut down, as if you'd chosen Shut down in it." />
+                <Button x:Name="TurnOffButton" Content="Turn off" Margin="0,0,8,8" IsEnabled="False" Click="TurnOff_Click"
+                        ToolTip="Cuts the VM's power at once. Anything unsaved inside it is lost." />
+                <Button x:Name="PauseButton" Content="Pause" MinWidth="66" Margin="0,0,8,8" IsEnabled="False" Click="Pause_Click" />
+                <Button x:Name="SaveButton" Content="Save" Margin="0,0,8,8" IsEnabled="False" Click="Save_Click"
+                        ToolTip="Writes the VM's memory to disk and stops it. Start carries on from where it was." />
+                <Button x:Name="DeleteButton" Content="Delete" Margin="0,0,8,8" IsEnabled="False" Click="Delete_Click"
+                        ToolTip="A VM has to be off or saved before it can be deleted." />
+                <TextBlock x:Name="ActionText" Margin="4,0,0,8" VerticalAlignment="Center" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+            </WrapPanel>
+
+            <DataGrid x:Name="Vms" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                      SelectionChanged="Vms_SelectionChanged" MouseDoubleClick="Vms_MouseDoubleClick">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="140" ElementStyle="{StaticResource CellText}" />
+                    <DataGridTextColumn Header="State" Binding="{Binding State}" Width="84" MinWidth="84">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource CellText}">
+                                <Setter Property="Foreground" Value="{Binding StateBrush}" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="CPU" Binding="{Binding Cpu}" SortMemberPath="CpuValue" Width="60" MinWidth="60" ElementStyle="{StaticResource NumText}" />
+                    <DataGridTextColumn Header="Memory" Binding="{Binding Memory}" SortMemberPath="MemoryValue" Width="84" MinWidth="84" ElementStyle="{StaticResource NumText}" />
+                    <DataGridTextColumn Header="Uptime" Binding="{Binding Uptime}" SortMemberPath="UptimeValue" Width="84" MinWidth="84" ElementStyle="{StaticResource NumText}" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <TextBlock x:Name="VmsEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed"
+                       Text="No virtual machines yet. Choose New VM to make one from an ISO." />
+
+            <Grid Grid.Row="2" Margin="0,10,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition MinHeight="40" />
+                </Grid.RowDefinitions>
+                <DockPanel Margin="0,0,0,10">
+                    <Button x:Name="DeleteCheckpointButton" DockPanel.Dock="Right" Content="Delete" Margin="8,0,0,0" IsEnabled="False" Click="DeleteCheckpoint_Click" />
+                    <Button x:Name="ApplyButton" DockPanel.Dock="Right" Content="Apply" Margin="8,0,0,0" IsEnabled="False" Click="Apply_Click" />
+                    <Button x:Name="TakeButton" DockPanel.Dock="Right" Content="Take checkpoint" Margin="8,0,0,0" IsEnabled="False" Click="Take_Click" />
+                    <TextBlock x:Name="CheckpointHint" DockPanel.Dock="Right" Style="{StaticResource Subtle}" VerticalAlignment="Center" Margin="10,0,4,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="CheckpointTitle" Text="CHECKPOINTS" Style="{StaticResource PanelLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </DockPanel>
+                <DataGrid x:Name="Checkpoints" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="Checkpoints_SelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="200" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTextColumn Header="Taken" Binding="{Binding TakenText}" SortMemberPath="TakenValue" Width="150" MinWidth="150" ElementStyle="{StaticResource CellText}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <!-- This list can be as short as 40, so its text sits higher than EmptyText's usual 50. -->
+                <TextBlock x:Name="CheckpointsEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Margin="30,36,30,0" Visibility="Collapsed" />
+            </Grid>
+        </Grid>
+
+        <p:JobOutputPanel x:Name="Panel" Grid.Row="5" Margin="0,10,0,0" Visibility="Collapsed" />
+    </Grid>
+</UserControl>

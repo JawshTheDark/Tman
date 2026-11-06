@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -11,11 +11,12 @@
     <ApplicationIcon>Assets\Tman.ico</ApplicationIcon>
     <NoWarn>$(NoWarn);WPF0001;CA1416;SYSLIB1054</NoWarn>
     <Product>Tman</Product>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
     <PackageReference Include="System.Management" Version="10.0.14" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.14" />
   </ItemGroup>

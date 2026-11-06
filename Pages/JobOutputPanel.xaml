@@ -1,0 +1,25 @@
+<UserControl x:Class="Tman.Pages.JobOutputPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <Border Style="{StaticResource SlimCard}">
+        <DockPanel>
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <Button x:Name="StopButton" DockPanel.Dock="Right" Content="Stop" Margin="8,0,0,0" Visibility="Collapsed" Click="Stop_Click" />
+                <Button x:Name="CopyButton" DockPanel.Dock="Right" Content="Copy output" Margin="8,0,0,0" IsEnabled="False" Click="Copy_Click" />
+                <TextBlock x:Name="ClockText" DockPanel.Dock="Right" Style="{StaticResource Subtle}" VerticalAlignment="Center" Margin="12,0,4,0" />
+                <TextBlock x:Name="TitleText" Style="{StaticResource PanelLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+            <StackPanel x:Name="ProgressPanel" DockPanel.Dock="Top" Margin="0,0,0,8" Visibility="Collapsed">
+                <c:UsageBar x:Name="Bar" Fill="{StaticResource AccentBrush}" />
+                <TextBlock x:Name="ProgressText" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <StackPanel x:Name="ResultPanel" DockPanel.Dock="Bottom" Margin="0,8,0,0" Visibility="Collapsed">
+                <TextBlock x:Name="ResultText" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock x:Name="RestartText" Style="{StaticResource Subtle}" Margin="0,2,0,0" />
+            </StackPanel>
+            <TextBox x:Name="Output" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                     BorderThickness="0" Background="Transparent" Padding="0" VerticalContentAlignment="Top" MinHeight="0" />
+        </DockPanel>
+    </Border>
+</UserControl>

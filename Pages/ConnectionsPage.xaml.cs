@@ -281,6 +281,47 @@ public partial class ConnectionsPage : UserControl, IPage
 
     void OpenLocation_Click(object sender, RoutedEventArgs e) => Ui.OpenFileLocation(Selected.FirstOrDefault()?.ExePath);
 
+    async void Block_Click(object sender, RoutedEventArgs e)
+    {
+        var rows = Selected;
+        if (rows.Count == 0) return;
+        if (!MainWindow.IsAdmin)
+        {
+            Ui.Error("Blocking a program in the firewall needs administrator rights. Use File > Restart as administrator.");
+            return;
+        }
+        var programs = rows.Select(c => c.ExePath).Where(p => !string.IsNullOrEmpty(p)).Select(p => p!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (programs.Count == 0)
+        {
+            Ui.Error($"Tman can't tell which program file {rows[0].Process} runs from, so it can't make a rule for it.");
+            return;
+        }
+        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows) + "\\";
+        var risk = programs.Any(p => p.StartsWith(windows, StringComparison.OrdinalIgnoreCase))
+            ? "\n\nThis is part of Windows. Blocking it can break Windows features such as updates, sign-in or name lookups." : "";
+        var list = string.Join("\n", programs.Select(p => $"{p}\nRule name: {FirewallStore.BlockRuleName(p)}"));
+        if (!Ui.Confirm($"Block all outgoing traffic from this program on every network?\n\n{list}\n\nIt won't be able to reach the internet or your network until you delete the rule on the Firewall page. Connections already open may keep working for a while.{risk}", "Block in firewall")) return;
+        var result = await Task.Run(() =>
+        {
+            var errors = new List<string>();
+            var existing = new List<string>();
+            foreach (var p in programs)
+            {
+                try
+                {
+                    if (!FirewallStore.AddOutboundBlock(p)) existing.Add(p);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"{p}: {ex.Message}");
+                }
+            }
+            return (errors, existing);
+        });
+        if (result.errors.Count > 0) Ui.Error("Couldn't add the firewall rule:\n\n" + string.Join("\n", result.errors));
+        if (result.existing.Count > 0) Ui.Error("Tman has already added a rule for this. If the program still gets through, check that the rule is enabled on the Firewall page:\n\n" + string.Join("\n", result.existing));
+    }
+
     void CopyRemote_Click(object sender, RoutedEventArgs e) =>
         Ui.Copy(string.Join(Environment.NewLine, Selected.Where(c => c.RemoteAddress.Length > 0).Select(c => $"{c.RemoteAddress}:{c.RemotePort}")));
 

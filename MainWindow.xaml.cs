@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Reflection;
 using System.Security.Principal;
 using System.Windows;
@@ -48,6 +48,37 @@ public partial class MainWindow : Window
             new NavEntry("drivers", "", "Drivers", () => new DriversPage()),
             new NavEntry("disk", "", "Disk space", () => new DiskSpacePage()),
             new NavEntry("bench", "", "Benchmarks", () => new BenchmarksPage()),
+            "DIAGNOSE",
+            new NavEntry("crashes", "", "Crash history", () => new CrashHistoryPage()),
+            new NavEntry("events", "", "Event log", () => new EventLogPage()),
+            new NavEntry("health", "", "Disk health", () => new DiskHealthPage()),
+            new NavEntry("devices", "", "Devices", () => new DevicesPage()),
+            new NavEntry("battery", "", "Battery", () => new BatteryPage()),
+            new NavEntry("latency", "", "Latency", () => new LatencyPage()),
+            new NavEntry("memory", "", "Memory map", () => new MemoryMapPage()),
+            new NavEntry("leaks", "", "Leak monitor", () => new LeakMonitorPage()),
+            "ADMIN",
+            new NavEntry("tweaks", "", "Tweaks", () => new TweaksPage()),
+            new NavEntry("contextmenus", "", "Context menus", () => new ContextMenusPage()),
+            new NavEntry("getapps", "", "Get apps", () => new InstallAppsPage()),
+            new NavEntry("features", "", "Windows features", () => new WindowsFeaturesPage()),
+            new NavEntry("isobuilder", "", "ISO builder", () => new IsoBuilderPage()),
+            new NavEntry("hyperv", "", "Hyper-V", () => new HyperVPage()),
+            new NavEntry("panels", "", "Control panels", () => new PanelsPage()),
+            new NavEntry("tasks", "", "Scheduled tasks", () => new ScheduledTasksPage()),
+            new NavEntry("updates", "", "Windows Update", () => new WindowsUpdatePage()),
+            new NavEntry("accounts", "", "Accounts", () => new AccountsPage()),
+            new NavEntry("environment", "", "Environment", () => new EnvironmentPage()),
+            new NavEntry("shares", "", "Shared folders", () => new SharesPage()),
+            new NavEntry("docker", "", "Docker", () => new DockerPage()),
+            "NETWORK",
+            new NavEntry("firewall", "", "Firewall", () => new FirewallPage()),
+            new NavEntry("nettools", "", "Network tools", () => new NetworkToolsPage()),
+            new NavEntry("hosts", "", "Hosts file", () => new HostsPage()),
+            new NavEntry("security", "", "Security", () => new SecurityPage()),
+            "REPAIR",
+            new NavEntry("repair", "", "System repair", () => new RepairPage()),
+            new NavEntry("restore", "", "Restore points", () => new RestorePointsPage()),
         };
         BuildNav();
 
@@ -80,7 +111,15 @@ public partial class MainWindow : Window
             WindowStartupLocation = WindowStartupLocation.Manual;
             Left = -20000;
             WindowState = WindowState.Normal;
-            Loaded += (_, _) => RunSnapshots(args[snap + 1], snap + 2 < args.Length ? args[snap + 2] : null, snap + 3 < args.Length ? args[snap + 3] : null);
+            var size = Array.IndexOf(args, "--size");
+            if (size > 0 && size + 1 < args.Length && args[size + 1].Split('x') is [var w, var h] && double.TryParse(w, out var width) && double.TryParse(h, out var height))
+            {
+                Width = width;
+                Height = height;
+                args = args[..size];
+            }
+            var list = args;
+            Loaded += (_, _) => RunSnapshots(list[snap + 1], snap + 2 < list.Length ? list[snap + 2] : null, snap + 3 < list.Length ? list[snap + 3] : null);
         }
         var offscreen = Array.IndexOf(args, "--offscreen");
         if (offscreen > 0)
@@ -98,6 +137,7 @@ public partial class MainWindow : Window
         {
             _tray = new TrayIcons(ShowFromTray, OpenTraySettings, ExitApp);
             _tray.Sync(null);
+            SourceInitialized += (_, _) => SingleInstance.Listen(this, ShowFromTray, ExitApp);
         }
         Application.Current.SessionEnding += (_, _) => App.Exiting = true;
         Closing += OnClosing;
@@ -269,7 +309,8 @@ public partial class MainWindow : Window
         try
         {
             Settings.Current.Save();
-            Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas" });
+            // The new copy waits for this one to leave, or it would find a copy running and stand down.
+            Process.Start(new ProcessStartInfo(Environment.ProcessPath!, $"{SingleInstance.AfterFlag} {Environment.ProcessId}") { UseShellExecute = true, Verb = "runas" });
             App.Quit();
         }
         catch (System.ComponentModel.Win32Exception)
@@ -348,7 +389,12 @@ public partial class MainWindow : Window
             if (extra != null && _current is BenchmarksPage bench) await bench.RunAllAsync();
             if (extra != null && _current is FileLocksPage locks) await locks.SearchAsync(extra);
             if (extra != null && _current is PerformancePage perf) { await Task.Delay(1500); perf.SelectDevice(extra); }
-            await Task.Delay(((NavEntry)item.Tag).Key is "drivers" or "disk" or "apps" or "services" or "startup" or "processes" ? 8000 : 2500);
+            if (extra != null && _current is LatencyPage latency) await latency.RunCaptureAsync(int.Parse(extra));
+            if (extra != null && _current is DockerPage docker) docker.ShowTab(int.Parse(extra));
+            if (extra == "sample" && _current is LeakMonitorPage leaks) await leaks.ShowSample();
+            if (extra != null && _current is IsoBuilderPage iso) await iso.LoadIsoAsync(extra);
+            await Task.Delay(((NavEntry)item.Tag).Key is "drivers" or "disk" or "apps" or "services" or "startup" or "processes"
+                or "crashes" or "events" or "health" or "devices" or "tasks" or "updates" or "accounts" or "shares" or "docker" or "firewall" or "security" or "restore" or "getapps" or "features" ? 8000 : 2500);
             var key = ((NavEntry)item.Tag).Key;
             SavePng((FrameworkElement)Content, Path.Combine(dir, key + ".png"));
             // Scrolling pages also get a capture of their whole content, below-the-fold included.
@@ -366,11 +412,11 @@ public partial class MainWindow : Window
         if (sample == null) return;
         var win = new ProcessDetailsWindow(new ProcessItem(sample)) { Owner = this, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20000, Top = 0 };
         win.Show();
-        string[] tabs = { "general", "threads", "modules", "environment", "files" };
+        string[] tabs = { "general", "threads", "modules", "environment", "files", "waitchain" };
         for (int i = 0; i < tabs.Length; i++)
         {
             win.SelectTab(i);
-            await Task.Delay(i == 4 ? 5000 : 2500);
+            await Task.Delay(i == 4 ? 5000 : i == 5 ? 4000 : 2500);
             SavePng((FrameworkElement)win.Content, Path.Combine(dir, $"details-{tabs[i]}.png"));
         }
         win.Close();
@@ -432,10 +478,31 @@ public partial class MainWindow : Window
         using (var tray = new TrayIcons(() => { }, () => { }, () => { }))
         {
             tray.Sync(snap);
-            checks.Add($"live icons accepted by the shell: {tray.Shown} of {Settings.Current.TrayItems.Count}");
+            checks.Add($"live icons accepted by the shell: {tray.Shown}");
             await Task.Delay(1500);
         }
         File.WriteAllLines(Path.Combine(dir, "tray-checks.txt"), checks);
+
+        // The combined icon at each tray size, with sample levels so empty and full bars both show, then the flyout.
+        var combined = new StackPanel { Orientation = Orientation.Horizontal, Background = System.Windows.Media.Brushes.Black };
+        foreach (var levels in new[] { new[] { 0.12, 0.62, 0.15 }, new[] { 1.0, 0.5, 0.0 } })
+            foreach (int size in sizes)
+            {
+                var image = new Image { Width = size * scale, Height = size * scale, Margin = new Thickness(6), Source = TrayRenderer.RenderBars(TrayIcons.BarMetrics().Select((m, i) => (levels[i], m.Color)).ToList(), size) };
+                System.Windows.Media.RenderOptions.SetBitmapScalingMode(image, System.Windows.Media.BitmapScalingMode.NearestNeighbor);
+                combined.Children.Add(image);
+            }
+        var host = new Window { Content = combined, SizeToContent = SizeToContent.WidthAndHeight, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20000, Top = 0, ShowInTaskbar = false, WindowStyle = WindowStyle.None, ShowActivated = false };
+        host.Show();
+        await Task.Delay(300);
+        SavePng(combined, Path.Combine(dir, "tray-combined.png"));
+        host.Close();
+
+        var flyout = new TrayFlyout(() => { }, () => null);
+        flyout.ShowForSnapshot(SystemMonitor.Instance.Latest);
+        await Task.Delay(700);
+        SavePng((FrameworkElement)flyout.Content, Path.Combine(dir, "tray-flyout.png"));
+        flyout.Close();
 
         var dialog = new TraySettingsDialog(() => { }, () => { }) { Owner = this, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20000, Top = 0 };
         dialog.Show();

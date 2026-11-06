@@ -1,0 +1,77 @@
+<UserControl x:Class="Tman.Pages.DevicesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Devices" Style="{StaticResource PageTitle}" />
+        <TextBlock x:Name="SummaryText" Grid.Row="1" Style="{StaticResource PageSubtitle}" />
+        <c:AdminNote Grid.Row="2" Text="Enable, Disable and Scan for hardware changes need admin." />
+
+        <DockPanel Grid.Row="3" Style="{StaticResource Toolbar}">
+            <Button x:Name="RefreshButton" DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+            <Button DockPanel.Dock="Right" Content="Device Manager" Margin="8,0,0,0" Click="DeviceManager_Click" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="170" MaxWidth="300" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <c:SearchBox x:Name="Search" Placeholder="Search devices" />
+                <ComboBox x:Name="ClassFilter" Grid.Column="1" Margin="10,0,0,0" MinWidth="150" MaxWidth="210" SelectionChanged="Filter_Changed" />
+                <CheckBox x:Name="ProblemsOnly" Grid.Column="2" Content="Problems only" Margin="14,0,0,0" Click="Filter_Changed" />
+                <TextBlock x:Name="CountText" Grid.Column="3" Style="{StaticResource ToolbarCount}" />
+            </Grid>
+        </DockPanel>
+
+        <WrapPanel Grid.Row="4" Style="{StaticResource ActionRow}">
+            <Button x:Name="EnableButton" Content="Enable" Margin="0,0,8,8" IsEnabled="False" Click="Enable_Click" ToolTipService.ShowOnDisabled="True" />
+            <Button x:Name="DisableButton" Content="Disable" Margin="0,0,16,8" IsEnabled="False" Click="Disable_Click" ToolTipService.ShowOnDisabled="True" />
+            <Button x:Name="ScanButton" Content="Scan for hardware changes" Margin="0,0,16,8" Click="Scan_Click" ToolTipService.ShowOnDisabled="True" />
+            <Button x:Name="SearchButton" Content="Search online" Margin="0,0,8,8" IsEnabled="False" Click="SearchOnline_Click" />
+        </WrapPanel>
+
+        <DataGrid x:Name="List" Grid.Row="5" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="List_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Device" Binding="{Binding Name}" Width="3*" MinWidth="150" ElementStyle="{StaticResource CellText}" />
+                <DataGridTemplateColumn Header="Status" SortMemberPath="Rank" Width="2*" MinWidth="110">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}" Style="{StaticResource CellText}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Class" Binding="{Binding Class}" Width="2*" MinWidth="90" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Manufacturer" Binding="{Binding Manufacturer}" Width="2*" MinWidth="90" ElementStyle="{StaticResource CellText}" />
+            </DataGrid.Columns>
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="EnableItem" Header="Enable" Click="Enable_Click" />
+                    <MenuItem x:Name="DisableItem" Header="Disable" Click="Disable_Click" />
+                    <Separator />
+                    <MenuItem Header="Search online" Click="SearchOnline_Click" />
+                    <MenuItem Header="Copy details" Click="Copy_Click" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+        </DataGrid>
+        <TextBlock x:Name="EmptyText" Grid.Row="5" Visibility="Collapsed" Style="{StaticResource EmptyText}" />
+
+        <Border x:Name="DetailsPane" Grid.Row="6" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock x:Name="DetailTitle" FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="DetailMeaning" Margin="0,4,0,0" TextWrapping="Wrap" />
+                <TextBlock x:Name="DetailFix" Margin="0,4,0,0" TextWrapping="Wrap" />
+                <TextBlock x:Name="DetailId" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

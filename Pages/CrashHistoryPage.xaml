@@ -1,0 +1,135 @@
+<UserControl x:Class="Tman.Pages.CrashHistoryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Crash history" Style="{StaticResource PageTitle}" />
+        <StackPanel x:Name="HeadPanel" Grid.Row="1">
+            <TextBlock x:Name="Headline" Text="Reading the event logs…" FontSize="15" FontWeight="SemiBold" Style="{StaticResource PageSubtitle}" />
+            <TextBlock x:Name="SubHeadline" Style="{StaticResource PageSubtitle}" />
+            <TextBlock x:Name="TopLine" Visibility="Collapsed" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Style="{StaticResource PageSubtitle}" />
+        </StackPanel>
+        <TextBlock x:Name="CountLine" Grid.Row="2" Margin="0,10,0,0" Visibility="Collapsed" TextTrimming="CharacterEllipsis" />
+        <UniformGrid x:Name="Tiles" Grid.Row="2" Columns="4" Margin="0,12,-10,0">
+            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="Blue screens" Style="{StaticResource StatLabel}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="BlueCount" Text="—" Style="{StaticResource StatBig}" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="Unexpected shutdowns" Style="{StaticResource StatLabel}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="ShutdownCount" Text="—" Style="{StaticResource StatBig}" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="App crashes" Style="{StaticResource StatLabel}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="CrashCount" Text="—" Style="{StaticResource StatBig}" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="App hangs" Style="{StaticResource StatLabel}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="HangCount" Text="—" Style="{StaticResource StatBig}" />
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+        <DockPanel Grid.Row="3" Style="{StaticResource Toolbar}">
+            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="170" MaxWidth="300" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <c:SearchBox x:Name="Search" Placeholder="Search" />
+                <ComboBox x:Name="KindBox" Grid.Column="1" Margin="10,0,0,0" MinWidth="170" SelectedIndex="0" SelectionChanged="KindBox_SelectionChanged">
+                    <ComboBoxItem Content="Everything" />
+                    <ComboBoxItem Content="Blue screens" />
+                    <ComboBoxItem Content="Unexpected shutdowns" />
+                    <ComboBoxItem Content="App crashes" />
+                    <ComboBoxItem Content="App hangs" />
+                </ComboBox>
+                <ComboBox x:Name="RangeBox" Grid.Column="2" Margin="10,0,0,0" MinWidth="125" SelectedIndex="1" SelectionChanged="RangeBox_SelectionChanged">
+                    <ComboBoxItem Content="Last 7 days" />
+                    <ComboBoxItem Content="Last 30 days" />
+                    <ComboBoxItem Content="Last 90 days" />
+                    <ComboBoxItem Content="All time" />
+                </ComboBox>
+            </Grid>
+        </DockPanel>
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition x:Name="SideColumn" Width="250" />
+            </Grid.ColumnDefinitions>
+            <DataGrid x:Name="List" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="List_SelectionChanged">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="When" Binding="{Binding TimeText}" SortMemberPath="Time" Width="135" ElementStyle="{StaticResource CellText}" />
+                    <DataGridTemplateColumn Header="What happened" SortMemberPath="KindText" Width="150">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding KindText}" Foreground="{Binding KindBrush}" Style="{StaticResource CellText}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Details" Binding="{Binding Summary}" Width="*" MinWidth="120" ElementStyle="{StaticResource CellText}" />
+                    <DataGridTextColumn Header="Times" Binding="{Binding Count}" Width="60" ElementStyle="{StaticResource NumText}" />
+                </DataGrid.Columns>
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Search online" Click="SearchOnline_Click" />
+                        <MenuItem Header="Copy details" Click="Copy_Click" />
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+            </DataGrid>
+            <TextBlock x:Name="EmptyText" Visibility="Collapsed" Style="{StaticResource EmptyText}" />
+            <Border x:Name="SidePane" Grid.Column="1" Style="{StaticResource Card}" Margin="10,0,0,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Top crashing apps" Style="{StaticResource CardTitle}" Margin="0,0,0,8" />
+                    <TextBlock x:Name="TopEmpty" DockPanel.Dock="Top" TextWrapping="Wrap" Style="{StaticResource Subtle}" Visibility="Collapsed" />
+                    <ItemsControl x:Name="TopApps">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,8">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Total}" Margin="8,0,0,0" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding App}" TextTrimming="CharacterEllipsis" ToolTip="{Binding App}" />
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding Breakdown}" FontSize="11" Style="{StaticResource Subtle}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DockPanel>
+            </Border>
+        </Grid>
+        <Border x:Name="DetailsPane" Grid.Row="5" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Margin="12,0,0,0">
+                    <Button Content="Search online" HorizontalAlignment="Stretch" Click="SearchOnline_Click" />
+                    <Button x:Name="OpenButton" Content="Open file location" HorizontalAlignment="Stretch" Margin="0,8,0,0" Click="OpenLocation_Click" />
+                    <Button Content="Copy details" HorizontalAlignment="Stretch" Margin="0,8,0,0" Click="Copy_Click" />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <TextBlock x:Name="DetailTitle" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+                        <TextBlock x:Name="DetailWhen" Margin="0,2,0,0" TextWrapping="Wrap" Style="{StaticResource Subtle}" />
+                        <TextBlock x:Name="DetailExplain" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <StackPanel x:Name="DetailFacts" Margin="0,8,0,0" />
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

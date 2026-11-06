@@ -1,0 +1,110 @@
+<UserControl x:Class="Tman.Pages.LatencyPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" Padding="0,0,12,0">
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Latency" Style="{StaticResource PageTitle}" />
+        <c:AdminNote Grid.Row="1"
+                     Text="A capture needs administrator rights, because Windows only lets administrators trace kernel timing. Nothing can be measured without them." />
+        <DockPanel Grid.Row="2" Style="{StaticResource Toolbar}">
+            <Button x:Name="StartButton" Content="Start capture" Click="Start_Click" />
+            <Button x:Name="StopButton" Content="Stop" Margin="8,0,0,0" IsEnabled="False" Click="Stop_Click" />
+            <ComboBox x:Name="LengthBox" Margin="10,0,0,0" MinWidth="110" SelectedIndex="1" VerticalAlignment="Center">
+                <ComboBoxItem Content="10 seconds" Tag="10" />
+                <ComboBoxItem Content="30 seconds" Tag="30" />
+                <ComboBoxItem Content="1 minute" Tag="60" />
+                <ComboBoxItem Content="2 minutes" Tag="120" />
+                <ComboBoxItem Content="5 minutes" Tag="300" />
+            </ComboBox>
+            <TextBlock x:Name="StatusText" Style="{StaticResource ToolbarCount}" />
+        </DockPanel>
+        <c:UsageBar x:Name="Progress" Grid.Row="3" Margin="0,0,0,10" Fill="{StaticResource AccentBrush}" Visibility="Collapsed" />
+
+        <Border x:Name="VerdictCard" Grid.Row="4" Style="{StaticResource SlimCard}" Margin="0,0,0,10" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock x:Name="VerdictTitle" FontWeight="Bold" FontSize="15" TextWrapping="Wrap" />
+                <TextBlock x:Name="VerdictText" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <UniformGrid x:Name="Tiles" Grid.Row="5" Rows="1" Margin="0,0,-10,10" Visibility="Collapsed">
+            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="Highest DPC" Style="{StaticResource StatLabel}" />
+                    <TextBlock x:Name="DpcValue" Style="{StaticResource StatBig}" />
+                    <TextBlock x:Name="DpcSub" FontSize="12" Style="{StaticResource Subtle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="Highest ISR" Style="{StaticResource StatLabel}" />
+                    <TextBlock x:Name="IsrValue" Style="{StaticResource StatBig}" />
+                    <TextBlock x:Name="IsrSub" FontSize="12" Style="{StaticResource Subtle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="Busiest processor" Style="{StaticResource StatLabel}" />
+                    <TextBlock x:Name="CpuValue" Style="{StaticResource StatBig}" />
+                    <TextBlock x:Name="CpuSub" FontSize="12" Style="{StaticResource Subtle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="Events measured" Style="{StaticResource StatLabel}" />
+                    <TextBlock x:Name="EventsValue" Style="{StaticResource StatBig}" />
+                    <TextBlock x:Name="EventsSub" FontSize="12" Style="{StaticResource Subtle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <Border x:Name="EmptyCard" Grid.Row="6" Style="{StaticResource Card}" VerticalAlignment="Top">
+            <StackPanel>
+                <TextBlock Text="Find what's causing stutter and audio crackle" Style="{StaticResource CardTitle}" />
+                <TextBlock x:Name="EmptyText" Margin="0,8,0,0" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <DataGrid x:Name="List" Grid.Row="6" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" Visibility="Collapsed"
+                  SelectionChanged="List_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Driver" Binding="{Binding File}" Width="160" MinWidth="130" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Max" Binding="{Binding MaxText}" SortMemberPath="Max" Width="86" MinWidth="86" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Average" Binding="{Binding AverageText}" SortMemberPath="Average" Width="84" MinWidth="84" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Total" Binding="{Binding TotalText}" SortMemberPath="Total" Width="112" MinWidth="112" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="DPCs" Binding="{Binding DpcCountText}" SortMemberPath="DpcCount" Width="84" MinWidth="84" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="ISRs" Binding="{Binding IsrCountText}" SortMemberPath="IsrCount" Width="78" MinWidth="78" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Over 1 ms" Binding="{Binding SpikesText}" SortMemberPath="Spikes" Width="86" MinWidth="86" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" MinWidth="180" ElementStyle="{StaticResource CellText}" />
+            </DataGrid.Columns>
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Open file location" Click="OpenLocation_Click" />
+                    <MenuItem Header="Search online" Click="SearchOnline_Click" />
+                    <MenuItem Header="Copy details" Click="Copy_Click" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+        </DataGrid>
+
+        <Border x:Name="DetailsPane" Grid.Row="7" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock x:Name="DetailTitle" FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="DetailPath" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="DetailDpc" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="DetailIsr" Style="{StaticResource Subtle}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </Border>
+    </Grid>
+    </ScrollViewer>
+</UserControl>

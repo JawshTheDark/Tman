@@ -1,0 +1,61 @@
+<UserControl x:Class="Tman.Pages.EnvironmentPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition MinHeight="80" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Environment" Style="{StaticResource PageTitle}" />
+        <c:AdminNote Grid.Row="1"
+                     Text="Changing system variables needs administrator rights. You can view them, and your own user variables work as normal." />
+        <DockPanel Grid.Row="2" Style="{StaticResource Toolbar}">
+            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+            <Button DockPanel.Dock="Right" Content="Backups" Margin="8,0,0,0" Click="Backups_Click" />
+            <c:SearchBox x:Name="Search" Width="300" Placeholder="Search names and values" />
+            <TextBlock x:Name="CountText" Style="{StaticResource ToolbarCount}" />
+        </DockPanel>
+        <WrapPanel Grid.Row="3" Style="{StaticResource ActionRow}">
+            <Button Content="Add" Margin="0,0,8,8" Click="Add_Click" />
+            <Button x:Name="EditButton" Content="Edit" Margin="0,0,8,8" IsEnabled="False" Click="Edit_Click" />
+            <Button x:Name="DeleteButton" Content="Delete" Margin="0,0,16,8" IsEnabled="False" Click="Delete_Click" />
+            <Button Content="User PATH" Margin="0,0,8,8" Click="UserPath_Click" />
+            <Button Content="System PATH" Margin="0,0,8,8" Click="SystemPath_Click" />
+        </WrapPanel>
+        <DataGrid x:Name="List" Grid.Row="4" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                  SelectionChanged="List_SelectionChanged" MouseDoubleClick="List_MouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Scope" Binding="{Binding ScopeText}" Width="75" MinWidth="75" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200" MinWidth="200" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*" MinWidth="260" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Type" Binding="{Binding KindText}" Width="95" MinWidth="95" ElementStyle="{StaticResource CellText}" />
+            </DataGrid.Columns>
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="EditMenu" Header="Edit" Click="Edit_Click" />
+                    <MenuItem x:Name="DeleteMenu" Header="Delete" Click="Delete_Click" />
+                    <Separator />
+                    <MenuItem Header="Copy value" Click="CopyValue_Click" />
+                    <MenuItem Header="Copy name" Click="CopyName_Click" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+        </DataGrid>
+        <TextBlock x:Name="EmptyText" Grid.Row="4" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
+        <Border x:Name="DetailsPane" Grid.Row="5" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock x:Name="DetailTitle" Style="{StaticResource CardHeading}" />
+                    <TextBlock x:Name="DetailValue" Margin="0,4,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+        <TextBlock x:Name="StatusText" Grid.Row="6" Style="{StaticResource Subtle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                   Text="Running apps keep the values they started with, so restart an app to see a change." />
+    </Grid>
+</UserControl>
