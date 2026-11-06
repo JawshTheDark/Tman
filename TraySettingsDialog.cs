@@ -9,7 +9,7 @@ using Tman.Tray;
 
 namespace Tman;
 
-/// <summary>Choose which live icons Tman shows in the system tray, their order and style. Changes apply immediately.</summary>
+/// <summary>Choose how Tman appears in the system tray and which metrics it shows. Changes apply immediately.</summary>
 public sealed class TraySettingsDialog : Window
 {
     sealed class Row
@@ -22,7 +22,11 @@ public sealed class TraySettingsDialog : Window
     readonly Action _apply, _rebuild;
     readonly List<Row> _rows = new();
     readonly ListBox _list = new() { Height = 250, Margin = new Thickness(0, 6, 8, 0) };
-    readonly CheckBox _enabled = new() { Content = "Show live icons in the system tray", FontWeight = FontWeights.Bold };
+    readonly CheckBox _enabled = new() { Content = "Show Tman in the system tray", FontWeight = FontWeights.Bold };
+    readonly RadioButton _combined = new() { Content = "One icon with a flyout", GroupName = "TrayLayout", MinWidth = 0, Margin = new Thickness(0, 0, 16, 0) };
+    readonly RadioButton _separate = new() { Content = "Separate icons", GroupName = "TrayLayout", MinWidth = 0 };
+    readonly TextBlock _iconsHint = Hint("");
+    readonly StackPanel _stylePanel = new();
     readonly RadioButton _number = new() { Content = "Number", GroupName = "TrayStyle", MinWidth = 0, Margin = new Thickness(0, 0, 16, 0) };
     readonly RadioButton _meter = new() { Content = "LED meter", GroupName = "TrayStyle", MinWidth = 0 };
     readonly CheckBox _keep = new() { Content = "Keep Tman running in the tray when its window is closed", Margin = new Thickness(0, 14, 0, 0) };
@@ -43,6 +47,8 @@ public sealed class TraySettingsDialog : Window
 
         var s = Settings.Current;
         _enabled.IsChecked = s.TrayEnabled;
+        _combined.IsChecked = s.TrayLayout != "separate";
+        _separate.IsChecked = s.TrayLayout == "separate";
         _number.IsChecked = s.TrayStyle != "meter";
         _meter.IsChecked = s.TrayStyle == "meter";
         _keep.IsChecked = s.KeepInTray;
@@ -64,6 +70,8 @@ public sealed class TraySettingsDialog : Window
         }
 
         _enabled.Click += (_, _) => Changed();
+        _combined.Checked += (_, _) => Changed();
+        _separate.Checked += (_, _) => Changed();
         _number.Checked += (_, _) => Changed();
         _meter.Checked += (_, _) => Changed();
         _keep.Click += (_, _) => Changed();
@@ -80,9 +88,15 @@ public sealed class TraySettingsDialog : Window
         listRow.Children.Add(moveButtons);
         listRow.Children.Add(_list);
 
+        var layout = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+        layout.Children.Add(_combined);
+        layout.Children.Add(_separate);
+
         var style = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
         style.Children.Add(_number);
         style.Children.Add(_meter);
+        _stylePanel.Children.Add(Label("STYLE", 16));
+        _stylePanel.Children.Add(style);
 
         var pin = new Button { Content = "Always show on the taskbar", Margin = new Thickness(0, 0, 8, 0) };
         pin.Click += (_, _) => Pin();
@@ -99,16 +113,17 @@ public sealed class TraySettingsDialog : Window
 
         var root = new StackPanel { Margin = new Thickness(20) };
         root.Children.Add(_enabled);
-        root.Children.Add(Label("ICONS", 16));
-        root.Children.Add(Hint("Tick what to show. The order here is the order the icons appear in the tray."));
+        root.Children.Add(Label("LAYOUT", 16));
+        root.Children.Add(layout);
+        root.Children.Add(Label("WHAT IT SHOWS", 16));
+        root.Children.Add(_iconsHint);
         root.Children.Add(listRow);
-        root.Children.Add(Label("STYLE", 16));
-        root.Children.Add(style);
+        root.Children.Add(_stylePanel);
         root.Children.Add(Label("PREVIEW (ACTUAL SIZE, ENLARGED 2×)", 14));
         root.Children.Add(_preview);
         root.Children.Add(_keep);
         root.Children.Add(Label("VISIBILITY", 16));
-        root.Children.Add(Hint("Windows 11 puts new tray icons in the hidden-icons flyout (^) at first. Pin them to keep them in view."));
+        root.Children.Add(Hint("Windows 11 puts new tray icons behind the ^ arrow at first. Pin Tman to keep it in view."));
         root.Children.Add(pinRow);
         root.Children.Add(close);
         Content = root;
@@ -152,6 +167,7 @@ public sealed class TraySettingsDialog : Window
         if (_loading) return;
         var s = Settings.Current;
         s.TrayEnabled = _enabled.IsChecked == true;
+        s.TrayLayout = _separate.IsChecked == true ? "separate" : "combined";
         s.TrayItems = _rows.Where(r => r.Box.IsChecked == true).Select(r => r.Metric.Key).ToList();
         s.TrayStyle = _meter.IsChecked == true ? "meter" : "number";
         s.KeepInTray = _keep.IsChecked == true;
@@ -167,9 +183,22 @@ public sealed class TraySettingsDialog : Window
         _preview.Children.Clear();
         var snap = SystemMonitor.Instance.Latest;
         var s = Settings.Current;
-        if (!s.TrayEnabled || s.TrayItems.Count == 0)
+        bool combined = s.TrayLayout != "separate";
+        _stylePanel.Visibility = combined ? Visibility.Collapsed : Visibility.Visible;
+        _iconsHint.Text = combined
+            ? "The first three ticked become bars on the icon. Hovering shows all of these, whichever are ticked."
+            : "Tick what to show. The order here is the order the icons appear in the tray.";
+        if (!s.TrayEnabled || (!combined && s.TrayItems.Count == 0))
         {
             _preview.Children.Add(Hint("No tray icons."));
+            return;
+        }
+        if (combined)
+        {
+            var bars = TrayIcons.BarMetrics().Select(m => ((snap == null ? null : m.Read(snap))?.Level ?? 0, m.Color)).ToList();
+            var icon = new Image { Source = TrayRenderer.RenderBars(bars, 16), Width = 32, Height = 32 };
+            RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.NearestNeighbor);
+            _preview.Children.Add(icon);
             return;
         }
         foreach (var key in s.TrayItems)
@@ -189,7 +218,7 @@ public sealed class TraySettingsDialog : Window
         int changed = TrayIcons.SetAlwaysShow(true);
         if (changed == 0)
         {
-            MessageBox.Show(this, "Windows hasn't registered Tman's tray icons yet. Turn the icons on, wait a moment, then try again, or use Taskbar settings > Other system tray icons.",
+            MessageBox.Show(this, "Windows hasn't registered Tman's tray icon yet. Turn it on, wait a moment, then try again, or use Taskbar settings > Other system tray icons.",
                 Title, MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }

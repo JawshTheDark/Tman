@@ -1,0 +1,241 @@
+<UserControl x:Class="Tman.Pages.InstallAppsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <UserControl.Resources>
+        <Style x:Key="RowCheck" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="ActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="0,0,8,6" />
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" SizeChanged="Scroller_SizeChanged">
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Get apps" Style="{StaticResource PageTitle}" />
+        <c:AdminNote Grid.Row="1" Margin="0,10,0,0"
+                     Text="Apps that install for everyone show a Windows permission prompt, and the queue waits for your answer. As administrator there's no prompt." />
+        <Border x:Name="MissingNote" Grid.Row="2" Style="{StaticResource Card}" Padding="12,8" Margin="0,10,0,0"
+                BorderBrush="{StaticResource BadBrush}" Visibility="Collapsed">
+            <TextBlock x:Name="MissingText" TextWrapping="Wrap" />
+        </Border>
+
+        <TabControl x:Name="Tabs" Grid.Row="3" Margin="0,10,0,0" SelectionChanged="Tabs_SelectionChanged">
+            <TabItem x:Name="BrowseTab" Header="Browse">
+                <Grid Margin="0,10,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+                        <c:SearchBox x:Name="Search" Placeholder="Search these apps and all of winget" />
+                    </DockPanel>
+                    <TextBlock Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,8"
+                               Text="Installing accepts each app's license and the terms of the winget source for you, so you won't be asked app by app. Read an app's license on its website first if that matters to you." />
+                    <WrapPanel Grid.Row="2">
+                        <Button x:Name="InstallButton" Content="Install selected" Style="{StaticResource ActionButton}" Click="Install_Click" />
+                        <Button x:Name="UninstallButton" Content="Uninstall selected" Style="{StaticResource ActionButton}" Click="Uninstall_Click" />
+                        <Button Content="Clear selection" Style="{StaticResource ActionButton}" Click="ClearSelection_Click" />
+                        <Button Content="Export list" Style="{StaticResource ActionButton}" Click="Export_Click" />
+                        <Button Content="Import list" Style="{StaticResource ActionButton}" Click="Import_Click" />
+                    </WrapPanel>
+                    <Grid Grid.Row="3">
+                        <DataGrid x:Name="AppList" IsReadOnly="True" SelectionMode="Extended" CanUserSortColumns="False"
+                                  VirtualizingPanel.IsVirtualizingWhenGrouping="True">
+                            <DataGrid.GroupStyle>
+                                <GroupStyle>
+                                    <GroupStyle.HeaderTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" Style="{StaticResource PanelLabel}" Margin="4,12,0,4" />
+                                        </DataTemplate>
+                                    </GroupStyle.HeaderTemplate>
+                                </GroupStyle>
+                            </DataGrid.GroupStyle>
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Width="36">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding Ticked, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowCheck}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="App" Binding="{Binding Name}" Width="3*" MinWidth="110" ElementStyle="{StaticResource CellText}" />
+                                <DataGridTextColumn Header="What it does" Binding="{Binding Description}" Width="5*" MinWidth="150" ElementStyle="{StaticResource CellText}" />
+                                <DataGridTextColumn Header="Winget ID" Binding="{Binding Id}" Width="3*" MinWidth="90" ElementStyle="{StaticResource CellText}" />
+                                <DataGridTemplateColumn Header="Status" Width="118">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding State}" Foreground="{Binding StateBrush}" ToolTip="{Binding VersionNote}" Style="{StaticResource CellText}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Search online" Click="SearchOnline_Click" />
+                                    <MenuItem Header="Copy winget ID" Click="CopyId_Click" />
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                        </DataGrid>
+                        <TextBlock x:Name="BrowseEmpty" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="20,50,20,0"
+                                   VerticalAlignment="Top" Visibility="Collapsed" />
+                    </Grid>
+                    <TextBlock x:Name="BrowseStatus" Grid.Row="4" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                </Grid>
+            </TabItem>
+
+            <TabItem x:Name="UpdatesTab" Header="Updates">
+                <Grid Margin="0,10,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <WrapPanel>
+                        <Button x:Name="UpdateSelectedButton" Content="Update selected" Style="{StaticResource ActionButton}" Click="UpdateSelected_Click" />
+                        <Button x:Name="UpdateAllButton" Content="Update all" Style="{StaticResource ActionButton}" Click="UpdateAll_Click" />
+                        <Button Content="Refresh" Style="{StaticResource ActionButton}" Click="Refresh_Click" />
+                    </WrapPanel>
+                    <Grid Grid.Row="1">
+                        <DataGrid x:Name="UpdateList" IsReadOnly="True" SelectionMode="Extended">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Width="36">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding Ticked, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanUpdate}" Style="{StaticResource RowCheck}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="App" Binding="{Binding Name}" Width="3*" MinWidth="110" ElementStyle="{StaticResource CellText}" />
+                                <DataGridTextColumn Header="Winget ID" Binding="{Binding Id}" Width="2*" MinWidth="90" ElementStyle="{StaticResource CellText}" />
+                                <DataGridTextColumn Header="Installed" Binding="{Binding Version}" Width="*" MinWidth="96" ElementStyle="{StaticResource CellText}" />
+                                <DataGridTextColumn Header="Available" Binding="{Binding Available}" Width="*" MinWidth="96" ElementStyle="{StaticResource CellText}" />
+                                <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="*" MinWidth="100" ElementStyle="{StaticResource CellText}" />
+                            </DataGrid.Columns>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Search online" Click="SearchOnline_Click" />
+                                    <MenuItem Header="Copy winget ID" Click="CopyId_Click" />
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                        </DataGrid>
+                        <TextBlock x:Name="UpdatesEmpty" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="20,50,20,0"
+                                   VerticalAlignment="Top" Visibility="Collapsed" />
+                    </Grid>
+                    <TextBlock x:Name="UpdatesStatus" Grid.Row="2" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                </Grid>
+            </TabItem>
+
+            <TabItem x:Name="BuiltInTab" Header="Built-in apps">
+                <Grid Margin="0,10,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="RefreshBuiltIn_Click" />
+                        <c:SearchBox x:Name="BuiltInSearch" Placeholder="Search built-in apps" />
+                    </DockPanel>
+                    <TextBlock Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,8"
+                               Text="Removing an app affects only your account, and its saved data goes with it. To get an app back, open the Microsoft Store, search for its name and install it." />
+                    <WrapPanel Grid.Row="2">
+                        <Button x:Name="RemoveButton" Content="Remove selected" Style="{StaticResource ActionButton}" Click="Remove_Click" />
+                        <Button Content="Select common extras" Style="{StaticResource ActionButton}" Click="SelectExtras_Click" />
+                        <Button Content="Clear selection" Style="{StaticResource ActionButton}" Click="ClearBuiltIn_Click" />
+                        <Button Content="Open Microsoft Store" Style="{StaticResource ActionButton}" Click="OpenStore_Click" />
+                    </WrapPanel>
+                    <Grid Grid.Row="3">
+                        <DataGrid x:Name="BuiltInList" IsReadOnly="True" SelectionMode="Extended">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Width="36">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding Ticked, UpdateSourceTrigger=PropertyChanged}" Visibility="{Binding CanRemove, Converter={StaticResource BoolToVis}}"
+                                                      Style="{StaticResource RowCheck}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="App" Binding="{Binding Name}" Width="3*" MinWidth="120" ElementStyle="{StaticResource CellText}" />
+                                <DataGridTemplateColumn Header="Note" SortMemberPath="Note" Width="5*" MinWidth="170">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Note}" ToolTip="{Binding Note}" Style="{StaticResource CellText}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Status" SortMemberPath="State" Width="90">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding State}" Style="{StaticResource CellText}" Foreground="{StaticResource SubtleBrush}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Package" Binding="{Binding Package}" Width="3*" MinWidth="90" ElementStyle="{StaticResource CellText}" />
+                            </DataGrid.Columns>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Search online" Click="SearchOnlineBuiltIn_Click" />
+                                    <MenuItem Header="Copy package name" Click="CopyPackage_Click" />
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                        </DataGrid>
+                        <TextBlock x:Name="BuiltInEmpty" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="20,50,20,0"
+                                   VerticalAlignment="Top" Visibility="Collapsed" />
+                    </Grid>
+                    <TextBlock x:Name="BuiltInStatus" Grid.Row="4" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <Border x:Name="QueuePane" Grid.Row="4" Style="{StaticResource Card}" Padding="12,8" Margin="0,10,0,0" Visibility="Collapsed">
+            <DockPanel>
+                <DockPanel DockPanel.Dock="Top">
+                    <Button DockPanel.Dock="Right" Content="Clear finished" Margin="8,0,0,0" Click="ClearQueue_Click" />
+                    <Button x:Name="LogToggle" DockPanel.Dock="Right" Content="Hide log" Margin="8,0,0,0" Click="LogToggle_Click" />
+                    <Button x:Name="CancelQueueButton" DockPanel.Dock="Right" Content="Cancel the rest" Margin="8,0,0,0" IsEnabled="False" Click="CancelQueue_Click" />
+                    <TextBlock Text="QUEUE" Style="{StaticResource PanelLabel}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="QueueStatus" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </DockPanel>
+                <Grid x:Name="QueueBody" Height="150" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <DataGrid x:Name="QueueList" IsReadOnly="True" SelectionMode="Single" CanUserSortColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="App" Binding="{Binding Title}" Width="2*" MinWidth="90" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTemplateColumn Header="Result" Width="3*" MinWidth="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Result}" ToolTip="{Binding Result}" Foreground="{Binding ResultBrush}" Style="{StaticResource CellText}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBox x:Name="LogBox" Grid.Column="2" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                             VerticalContentAlignment="Top" FontSize="11" />
+                </Grid>
+            </DockPanel>
+        </Border>
+    </Grid>
+    </ScrollViewer>
+</UserControl>

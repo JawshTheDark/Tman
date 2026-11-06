@@ -45,6 +45,7 @@
                 <ContextMenu>
                     <MenuItem Header="End process" Click="EndProcess_Click" />
                     <MenuItem Header="Open file location" Click="OpenLocation_Click" />
+                    <MenuItem Header="Block in firewall" Click="Block_Click" />
                     <Separator />
                     <MenuItem Header="Copy remote address" Click="CopyRemote_Click" />
                     <MenuItem Header="Copy row" Click="CopyRow_Click" />

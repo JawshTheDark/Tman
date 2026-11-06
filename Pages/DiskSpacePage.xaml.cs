@@ -52,6 +52,8 @@ public partial class DiskSpacePage : UserControl, IPage
         InitializeComponent();
         Ui.SetupGrid(List);
         _progress.Tick += (_, _) => ProgressText.Text = $"Scanning… {Fmt.Num(Interlocked.Read(ref _scannedFiles))} files · {Fmt.Bytes(Interlocked.Read(ref _scannedBytes))}";
+        Cleanup.Cleaned += LoadDrives;
+        SizeChanged += (_, e) => DrivesRow.MaxHeight = Math.Max(120, e.NewSize.Height * 0.32);
     }
 
     public void OnShown() => LoadDrives();
@@ -86,6 +88,7 @@ public partial class DiskSpacePage : UserControl, IPage
 
     internal async void Analyze(string root)
     {
+        Tabs.SelectedIndex = 0;
         _cts?.Cancel();
         var cts = _cts = new CancellationTokenSource();
         _scannedFiles = _scannedBytes = 0;

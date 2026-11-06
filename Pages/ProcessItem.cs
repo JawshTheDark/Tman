@@ -64,6 +64,16 @@ public sealed class ProcessItem : ObservableObject
     public string IoText => Fmt.MbRate(_io);
     public Brush? IoHeat => Heat.Rate(_io);
 
+    double _net = -1;
+    /// <summary>Sent plus received, in bytes per second. Negative while no network trace is running.</summary>
+    public double Net
+    {
+        get => _net;
+        private set { if (Set(ref _net, value)) { Raise(nameof(NetText)); Raise(nameof(NetHeat)); } }
+    }
+    public string NetText => _net < 0 ? "" : _net < 1024 ? "0 KB/s" : Fmt.Rate(_net);
+    public Brush? NetHeat => _net < 0 ? null : Heat.Rate(_net);
+
     double _gpu;
     public double Gpu
     {
@@ -80,7 +90,13 @@ public sealed class ProcessItem : ObservableObject
     public int Handles { get => _handles; private set => Set(ref _handles, value); }
 
     string _status = "";
-    public string Status { get => _status; private set => Set(ref _status, value); }
+    public string Status
+    {
+        get => _status;
+        private set { if (Set(ref _status, value)) Raise(nameof(StatusBrush)); }
+    }
+    public bool Hung { get; private set; }
+    public Brush StatusBrush => Hung ? (Brush)Application.Current.FindResource("BadBrush") : NormalText;
 
     string _priority = "";
     public string Priority { get => _priority; private set => Set(ref _priority, value); }
@@ -121,7 +137,10 @@ public sealed class ProcessItem : ObservableObject
         Gpu = Math.Round(s.Gpu, 1);
         Threads = s.Threads;
         Handles = s.Handles;
-        Status = s.Suspended ? "Suspended" : "";
+        Net = s.NetBps < 0 ? -1 : Math.Round(s.NetBps / 1024) * 1024;
+        // A suspended app can't answer its windows either, and that isn't a hang.
+        Hung = s.Hung && !s.Suspended;
+        Status = s.Suspended ? "Suspended" : Hung ? "Not responding" : "";
         Priority = s.BasePriority switch
         {
             <= 4 => "Low",

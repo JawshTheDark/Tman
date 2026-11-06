@@ -1,0 +1,35 @@
+<UserControl x:Class="Tman.Pages.CleanupPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <DockPanel Margin="0,10,0,0">
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+            <DockPanel>
+                <Button x:Name="CleanButton" DockPanel.Dock="Right" Content="Clean selected" IsEnabled="False" Margin="8,0,0,0" Click="Clean_Click" />
+                <Button x:Name="ScanButton" DockPanel.Dock="Right" Content="Scan again" IsEnabled="False" Click="Scan_Click" />
+                <TextBlock x:Name="TotalText" Style="{StaticResource Subtle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+            <TextBlock x:Name="ResultText" TextWrapping="Wrap" Margin="0,6,0,0" MaxHeight="70" TextTrimming="CharacterEllipsis" Visibility="Collapsed" />
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+            <StackPanel Margin="0,0,8,0">
+                <c:AdminNote Text="Windows temp, the Windows Update download cache and Delivery Optimization files need administrator rights to clean. So do Windows' own crash dumps and error reports shared by all users." />
+                <ItemsControl x:Name="Rows" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding SizeText}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                <CheckBox IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanClean}" VerticalContentAlignment="Top" Click="Check_Click">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Category.Title}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Category.Hint}" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </CheckBox>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

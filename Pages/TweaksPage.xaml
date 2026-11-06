@@ -1,0 +1,106 @@
+<UserControl x:Class="Tman.Pages.TweaksPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Tweaks" Style="{StaticResource PageTitle}" />
+        <TextBlock Grid.Row="1" Margin="0,6,0,10" Style="{StaticResource Subtle}" TextWrapping="Wrap"
+                   Text="Each box shows the live setting and applies as soon as you click it. Tman saves the old value first, so turning a tweak off puts back exactly what was there." />
+        <c:AdminNote Grid.Row="2" Text="Tweaks marked Admin change the whole PC, so they're locked until you restart Tman as administrator. Presets skip them and restore points can't be created." />
+
+        <WrapPanel Grid.Row="3" Margin="0,2,0,6" Orientation="Horizontal">
+            <TextBlock Text="PRESETS" Style="{StaticResource PanelLabel}" VerticalAlignment="Center" Margin="0,0,10,6" />
+            <Button x:Name="MinimalButton" Content="Minimal" Margin="0,0,6,6" Click="Preset_Click" Tag="Minimal"
+                    ToolTip="Privacy and ads. Low risk, and you won't notice anything missing." />
+            <Button x:Name="StandardButton" Content="Standard" Margin="0,0,6,6" Click="Preset_Click" Tag="Standard"
+                    ToolTip="Minimal, plus a tidier Explorer, Start and right-click menu, and a few safer defaults." />
+            <Button x:Name="AdvancedButton" Content="Advanced" Margin="0,0,16,6" Click="Preset_Click" Tag="Advanced"
+                    ToolTip="Standard, plus changes that can get in the way. Read the list before you say yes." />
+            <Button x:Name="UndoButton" Content="Undo all" Margin="0,0,6,6" Click="UndoAll_Click" />
+            <Button x:Name="ExportButton" Content="Export" Margin="0,0,6,6" Click="Export_Click"
+                    ToolTip="Saves which tweaks are on, so you can apply the same set on another PC." />
+            <Button x:Name="ImportButton" Content="Import" Margin="0,0,0,6" Click="Import_Click" />
+        </WrapPanel>
+
+        <DockPanel Grid.Row="4" Margin="0,0,0,10">
+            <c:SearchBox x:Name="Search" Width="240" Placeholder="Search tweaks" />
+            <ComboBox x:Name="ShowFilter" Margin="10,0,0,0" MinWidth="150" SelectedIndex="0" SelectionChanged="ShowFilter_SelectionChanged">
+                <ComboBoxItem Content="All tweaks" />
+                <ComboBoxItem Content="Turned on" />
+                <ComboBoxItem Content="Changed by Tman" />
+            </ComboBox>
+            <ComboBox x:Name="GroupFilter" Margin="10,0,0,0" MinWidth="170" SelectedIndex="0" SelectionChanged="ShowFilter_SelectionChanged">
+                <ComboBoxItem Content="All groups" />
+            </ComboBox>
+            <TextBlock x:Name="CountText" Margin="16,0,0,0" VerticalAlignment="Center" Style="{StaticResource Subtle}" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+
+        <Grid Grid.Row="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Border x:Name="PendingBar" Style="{StaticResource Card}" Padding="12,8" Margin="0,0,0,10" Visibility="Collapsed"
+                    BorderBrush="{StaticResource AccentBrush}">
+                <DockPanel>
+                    <Button x:Name="ExplorerButton" DockPanel.Dock="Right" Content="Restart Explorer" Margin="12,0,0,0" Click="RestartExplorer_Click" />
+                    <TextBlock x:Name="PendingText" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
+            <ScrollViewer x:Name="Scroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl x:Name="List" Focusable="False" Margin="0,0,10,0">
+                    <ItemsControl.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" Style="{StaticResource PanelLabel}" Margin="0,8,0,6" />
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ItemsControl.GroupStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource Card}" Padding="12,8" Margin="0,0,0,6">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox IsChecked="{Binding IsOn, Mode=TwoWay}" IsEnabled="{Binding CanChange}" ToolTip="{Binding LockReason}"
+                                              VerticalAlignment="Center" MinWidth="0" Margin="0,0,10,0" AutomationProperties.Name="{Binding Name}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#F2F5F8" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding About}" Style="{StaticResource Subtle}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ItemsControl Grid.Column="2" ItemsSource="{Binding Tags}" Focusable="False" VerticalAlignment="Center" Margin="10,0,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="{StaticResource CardStrokeBrush}" BorderThickness="1" CornerRadius="3" Padding="6,1" Margin="4,0,0,0">
+                                                    <TextBlock Text="{Binding}" FontSize="10" Foreground="{StaticResource LabelBrush}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

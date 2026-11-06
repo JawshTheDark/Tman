@@ -35,6 +35,7 @@ public partial class PowerPage : UserControl, IPage
     {
         _visible = true;
         LoadPlans();
+        SleepWake.Refresh();
         if (Monitor.Latest is { } s) OnUpdated(s);
     }
 

@@ -7,7 +7,7 @@ using Tman.Controls;
 
 namespace Tman.Tray;
 
-/// <summary>Draws one tray icon (a number with a level strip, or an LED meter) and turns it into an HICON.</summary>
+/// <summary>Draws tray icons (a number with a level strip, an LED meter, or one icon of bars) and turns them into HICONs.</summary>
 internal static class TrayRenderer
 {
     static readonly Typeface Bold = new(new FontFamily("Tahoma"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
@@ -31,6 +31,42 @@ internal static class TrayRenderer
         bmp.Render(visual);
         bmp.Freeze();
         return bmp;
+    }
+
+    /// <summary>One icon with a bar per metric, each in its own color. Whole pixels only, so it stays sharp at 16 px.</summary>
+    public static BitmapSource RenderBars(IReadOnlyList<(double Level, Color Color)> bars, int size)
+    {
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            double radius = Math.Max(2, size * 0.16);
+            dc.DrawRoundedRectangle(Led.Brush(Face), new Pen(Led.Brush(Led.Alpha(Ink, 0x60)), 1), new Rect(0.5, 0.5, size - 1, size - 1), radius, radius);
+
+            const int air = 2; // 1 px frame + 1 px clear space
+            int room = size - 2 * air, gap = size >= 24 ? 2 : 1, count = Math.Max(1, bars.Count);
+            int width = (room - (count - 1) * gap) / count;
+            int x = air + (room - (count * width + (count - 1) * gap)) / 2;
+            foreach (var (level, color) in bars)
+            {
+                int height = BarHeight(level, size);
+                dc.DrawRectangle(Led.Brush(Led.Alpha(color, 0x30)), null, new Rect(x, air, width, room));
+                if (height > 0) dc.DrawRectangle(Led.Brush(color), null, new Rect(x, air + room - height, width, height));
+                x += width + gap;
+            }
+        }
+        var bmp = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+        bmp.Render(visual);
+        bmp.Freeze();
+        return bmp;
+    }
+
+    /// <summary>A bar's filled height in pixels. Anything above idle shows at least one pixel, so it never looks switched off.</summary>
+    public static int BarHeight(double level, int size)
+    {
+        int room = size - 4;
+        double clamped = double.IsFinite(level) ? Math.Clamp(level, 0, 1) : 0;
+        int height = (int)Math.Round(clamped * room);
+        return height == 0 && clamped > 0.02 ? 1 : height;
     }
 
     static void DrawNumber(DrawingContext dc, double s, string text, double level, Color color)

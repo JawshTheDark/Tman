@@ -1,0 +1,150 @@
+<UserControl x:Class="Tman.Pages.NetworkToolsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Network tools" Style="{StaticResource PageTitle}" Margin="0,0,0,10" />
+        <c:AdminNote Grid.Row="1" Text="Changing DNS and restarting an adapter need administrator rights." />
+        <TabControl x:Name="Tabs" Grid.Row="2">
+            <TabItem Header="Ping">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,10,0,8">
+                        <Button x:Name="PingButton" DockPanel.Dock="Right" Content="Start" MinWidth="90" Margin="8,0,0,0" Click="Ping_Click" />
+                        <c:SearchBox x:Name="PingHost" Placeholder="Name or IP address" KeyDown="PingHost_KeyDown" />
+                    </DockPanel>
+                    <TextBlock x:Name="PingStats" DockPanel.Dock="Top" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="PingMeaning" DockPanel.Dock="Top" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                    <DataGrid x:Name="PingList" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="100" MinWidth="100" SortMemberPath="Sequence" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Reply from" Binding="{Binding From}" Width="*" MinWidth="150" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Round trip" Binding="{Binding Rtt}" Width="110" MinWidth="110" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="TTL" Binding="{Binding Ttl}" Width="60" MinWidth="60" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Result" Binding="{Binding Result}" Width="140" MinWidth="120" ElementStyle="{StaticResource CellText}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <TabItem Header="Traceroute">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,10,0,8">
+                        <Button x:Name="TraceButton" DockPanel.Dock="Right" Content="Start" MinWidth="90" Margin="8,0,0,0" Click="Trace_Click" />
+                        <c:SearchBox x:Name="TraceHost" Placeholder="Name or IP address" KeyDown="TraceHost_KeyDown" />
+                    </DockPanel>
+                    <TextBlock x:Name="TraceSummary" DockPanel.Dock="Top" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                    <DataGrid x:Name="TraceList" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Hop" Binding="{Binding Hop}" Width="50" MinWidth="50" ElementStyle="{StaticResource NumText}" />
+                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="170" MinWidth="120" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="150" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Times" Binding="{Binding Times}" Width="170" MinWidth="150" ElementStyle="{StaticResource CellText}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <TabItem Header="DNS lookup">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,10,0,8">
+                        <Button x:Name="LookupButton" DockPanel.Dock="Right" Content="Look up" MinWidth="90" Margin="8,0,0,0" Click="Lookup_Click" />
+                        <c:SearchBox x:Name="LookupHost" Placeholder="Name to look up, or an IP address for its name" KeyDown="LookupHost_KeyDown" />
+                    </DockPanel>
+                    <TextBlock x:Name="LookupSummary" DockPanel.Dock="Top" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,0,0,8"
+                               Text="Answers come through Windows, so the hosts file and the DNS cache count too." />
+                    <DataGrid x:Name="LookupList" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="80" MinWidth="80" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="*" MinWidth="170" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Reverse name" Binding="{Binding Reverse}" Width="*" MinWidth="170" ElementStyle="{StaticResource CellText}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <TabItem x:Name="AdaptersTab" Header="Adapters">
+                <DockPanel>
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,8,0,6">
+                        <Button Content="Refresh" Margin="0,2,8,2" Click="RefreshAdapters_Click" />
+                        <Button Content="Flush DNS cache" Margin="0,2,8,2" Click="Flush_Click" />
+                        <Button x:Name="RestartButton" Content="Restart adapter" Margin="0,2,8,2" IsEnabled="False" Click="Restart_Click" />
+                        <Button x:Name="GatewayButton" Content="Ping gateway" Margin="0,2,12,2" IsEnabled="False" Click="PingGateway_Click" />
+                        <TextBlock x:Name="AdapterNote" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+                    </WrapPanel>
+                    <Border x:Name="AdapterDetails" DockPanel.Dock="Bottom" Style="{StaticResource Card}" Margin="0,8,0,0" Padding="12,8" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock x:Name="AdapterTitle" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="AdapterMac" Style="{StaticResource Subtle}" Margin="0,3,0,0" />
+                            <TextBlock x:Name="AdapterAddresses" Style="{StaticResource Subtle}" Margin="0,3,0,0" TextWrapping="Wrap" MaxHeight="48" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Border>
+                    <DataGrid x:Name="AdapterList" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="AdapterList_SelectionChanged">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="150" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" MinWidth="100" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Speed" Binding="{Binding SpeedText}" SortMemberPath="Speed" Width="80" MinWidth="80" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="IP address" Binding="{Binding Ip}" Width="150" MinWidth="120" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Gateway" Binding="{Binding Gateway}" Width="130" MinWidth="100" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="DNS servers" Binding="{Binding DnsText}" Width="150" MinWidth="110" ElementStyle="{StaticResource CellText}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <TabItem x:Name="DnsTab" Header="DNS provider">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="0,12,4,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="100*" MaxWidth="260" />
+                            <ColumnDefinition Width="100*" MaxWidth="260" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Adapter" VerticalAlignment="Center" Margin="0,0,14,8" />
+                        <ComboBox x:Name="DnsAdapter" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" SelectionChanged="DnsAdapter_SelectionChanged" />
+                        <TextBlock Grid.Row="1" Text="Current setting" Margin="0,0,14,4" />
+                        <TextBlock x:Name="DnsCurrent" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" TextWrapping="Wrap" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="2" Text="In use now" Margin="0,0,14,12" Style="{StaticResource Subtle}" />
+                        <TextBlock x:Name="DnsInUse" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                        <TextBlock Grid.Row="3" Text="Provider" VerticalAlignment="Center" Margin="0,0,14,8" />
+                        <ComboBox x:Name="DnsProviderBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" SelectionChanged="DnsProviderBox_SelectionChanged" />
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="Preferred" Style="{StaticResource StatLabel}" Margin="0,0,0,3" />
+                        <TextBlock Grid.Row="4" Grid.Column="2" Text="Alternate" Style="{StaticResource StatLabel}" Margin="0,0,0,3" />
+                        <TextBlock Grid.Row="5" Text="IPv4" VerticalAlignment="Center" Margin="0,0,14,8" />
+                        <TextBox x:Name="V4One" Grid.Row="5" Grid.Column="1" Margin="0,0,8,8" />
+                        <TextBox x:Name="V4Two" Grid.Row="5" Grid.Column="2" Margin="0,0,0,8" />
+                        <TextBlock Grid.Row="6" Text="IPv6" VerticalAlignment="Center" Margin="0,0,14,8" />
+                        <TextBox x:Name="V6One" Grid.Row="6" Grid.Column="1" Margin="0,0,8,8" />
+                        <TextBox x:Name="V6Two" Grid.Row="6" Grid.Column="2" Margin="0,0,0,8" />
+                        <TextBlock x:Name="DnsHint" Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                        <Button x:Name="DnsApply" Grid.Row="8" Grid.Column="1" Content="Apply" MinWidth="90" HorizontalAlignment="Left" IsEnabled="False" Click="DnsApply_Click" />
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem x:Name="WifiTab" Header="Wi-Fi">
+                <DockPanel>
+                    <TextBlock x:Name="WifiNote" DockPanel.Dock="Top" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,10,0,8"
+                               Text="Networks saved on this PC. Tman never reads their passwords." />
+                    <DataGrid x:Name="WifiList" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="200" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Security" Binding="{Binding Security}" Width="220" MinWidth="150" ElementStyle="{StaticResource CellText}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
@@ -25,12 +25,35 @@ public partial class App : Application
     {
         base.OnStartup(e);
         DispatcherUnhandledException += OnUnhandled;
+        if (!SingleInstance.Start(e.Args))
+        {
+            // Nothing has been loaded, so there's nothing to save, and leaving now means no window ever appears.
+            TerminateProcess(GetCurrentProcess(), 0);
+            return;
+        }
+        int watchdog = Array.IndexOf(e.Args, IsoBuilder.WatchdogFlag);
+        if (watchdog >= 0 && watchdog + 1 < e.Args.Length && int.TryParse(e.Args[watchdog + 1], out var owner))
+        {
+            RunIsoWatchdog(owner);
+            return;
+        }
         SystemMonitor.Instance.IntervalMs = Settings.Current.IntervalMs;
         // Recorders subscribe before any page so they've processed each sample by the time pages read them.
         AppUsage.Instance.Start();
         FlightRecorder.Instance.Start();
         SystemMonitor.Instance.Start(Dispatcher);
         StaticInfo.LoadAsync(Dispatcher);
+        // A build that lost its power as well as its process leaves only the journal to go on.
+        if (Tman.MainWindow.IsAdmin && IsoBuilder.Leftover() != null) _ = Task.Run(() => IsoBuilder.RecoverAsync(_ => { }));
+    }
+
+    /// <summary>The second process that sees a build through if this one dies. It never gets a window, and it runs off the UI thread so its awaits don't wait for this.</summary>
+    static void RunIsoWatchdog(int owner)
+    {
+        try { Task.Run(() => IsoBuilder.WatchAsync(owner)).GetAwaiter().GetResult(); }
+        catch (Exception ex) { ErrorLog.Write(ex); }
+        // Straight out, so that no exit code here saves settings this process never loaded.
+        TerminateProcess(GetCurrentProcess(), 0);
     }
 
     protected override void OnExit(ExitEventArgs e)

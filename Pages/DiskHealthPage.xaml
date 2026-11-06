@@ -1,0 +1,72 @@
+<UserControl x:Class="Tman.Pages.DiskHealthPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Tman.Controls">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+        <StackPanel>
+            <DockPanel>
+                <Button x:Name="RefreshButton" DockPanel.Dock="Right" Content="Refresh" VerticalAlignment="Center" Click="Refresh_Click" />
+                <TextBlock Text="Disk health" Style="{StaticResource PageTitle}" />
+            </DockPanel>
+            <TextBlock x:Name="Subtitle" Margin="0,2,0,12" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+            <c:AdminNote x:Name="Note" />
+            <TextBlock x:Name="EmptyText" TextWrapping="Wrap" Visibility="Collapsed" />
+
+            <ItemsControl x:Name="Cards" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Spec}" Style="{StaticResource Subtle}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                    <TextBlock Text="{Binding Model}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                                <TextBlock Text="{Binding Verdict}" Foreground="{Binding VerdictBrush}" FontSize="22" FontWeight="Bold" Margin="0,8,0,2" />
+                                <TextBlock Text="{Binding Reason}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Gap}" Visibility="{Binding GapVisibility}" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                <ItemsControl ItemsSource="{Binding Stats}" Margin="0,12,0,0" Focusable="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel ItemWidth="160" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,0,12,12">
+                                                <TextBlock Text="{Binding Label}" Style="{StaticResource StatLabel}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Value}" TextTrimming="CharacterEllipsis">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource StatValue}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Tone}" Value="Good">
+                                                                    <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Tone}" Value="Warn">
+                                                                    <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Tone}" Value="Bad">
+                                                                    <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Tone}" Value="Missing">
+                                                                    <Setter Property="Foreground" Value="{StaticResource SubtleBrush}" />
+                                                                    <Setter Property="FontSize" Value="13" />
+                                                                    <Setter Property="FontWeight" Value="Normal" />
+                                                                    <Setter Property="Margin" Value="0,3,0,3" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Note}" FontSize="11" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

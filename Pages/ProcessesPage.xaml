@@ -12,6 +12,9 @@
         <Style x:Key="IoCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
             <Setter Property="Background" Value="{Binding IoHeat}" />
         </Style>
+        <Style x:Key="NetCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+            <Setter Property="Background" Value="{Binding NetHeat}" />
+        </Style>
         <Style x:Key="GpuCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
             <Setter Property="Background" Value="{Binding GpuHeat}" />
         </Style>
@@ -47,7 +50,7 @@
         <DataGrid x:Name="List" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended"
                   SelectionChanged="Grid_SelectionChanged" MouseDoubleClick="Grid_MouseDoubleClick">
             <DataGrid.Columns>
-                <DataGridTemplateColumn Header="Name" SortMemberPath="Name" Width="230">
+                <DataGridTemplateColumn Header="Name" SortMemberPath="Name" Width="230" MinWidth="190">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <DockPanel VerticalAlignment="Center">
@@ -57,21 +60,29 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70" ElementStyle="{StaticResource NumText}" />
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="88" ElementStyle="{StaticResource CellText}" />
-                <DataGridTextColumn Header="User" Binding="{Binding User}" Width="110" ElementStyle="{StaticResource CellText}" />
-                <DataGridTextColumn Header="CPU" Binding="{Binding CpuText}" SortMemberPath="Cpu" Width="72"
+                <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70" MinWidth="60" ElementStyle="{StaticResource NumText}" />
+                <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="104" MinWidth="104">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Status}" Foreground="{Binding StatusBrush}" Style="{StaticResource CellText}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="User" Binding="{Binding User}" Width="110" MinWidth="70" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="CPU" Binding="{Binding CpuText}" SortMemberPath="Cpu" Width="72" MinWidth="62"
                                     ElementStyle="{StaticResource NumText}" CellStyle="{StaticResource CpuCell}" />
-                <DataGridTextColumn Header="Memory" Binding="{Binding MemoryText}" SortMemberPath="Memory" Width="100"
+                <DataGridTextColumn Header="Memory" Binding="{Binding MemoryText}" SortMemberPath="Memory" Width="100" MinWidth="88"
                                     ElementStyle="{StaticResource NumText}" CellStyle="{StaticResource MemCell}" />
-                <DataGridTextColumn Header="I/O" Binding="{Binding IoText}" SortMemberPath="Io" Width="88"
+                <DataGridTextColumn Header="I/O" Binding="{Binding IoText}" SortMemberPath="Io" Width="88" MinWidth="76"
                                     ElementStyle="{StaticResource NumText}" CellStyle="{StaticResource IoCell}" />
-                <DataGridTextColumn Header="GPU" Binding="{Binding GpuText}" SortMemberPath="Gpu" Width="70"
+                <DataGridTextColumn x:Name="NetworkColumn" Header="Network" Binding="{Binding NetText}" SortMemberPath="Net" Width="92" MinWidth="84"
+                                    ElementStyle="{StaticResource NumText}" CellStyle="{StaticResource NetCell}" />
+                <DataGridTextColumn Header="GPU" Binding="{Binding GpuText}" SortMemberPath="Gpu" Width="70" MinWidth="60"
                                     ElementStyle="{StaticResource NumText}" CellStyle="{StaticResource GpuCell}" />
-                <DataGridTextColumn Header="Threads" Binding="{Binding Threads}" Width="76" ElementStyle="{StaticResource NumText}" />
-                <DataGridTextColumn Header="Handles" Binding="{Binding Handles}" Width="80" ElementStyle="{StaticResource NumText}" />
-                <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="100" ElementStyle="{StaticResource CellText}" />
-                <DataGridTemplateColumn x:Name="SignerColumn" Header="Signer" SortMemberPath="Signer" Width="170">
+                <DataGridTextColumn Header="Threads" Binding="{Binding Threads}" Width="76" MinWidth="76" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Handles" Binding="{Binding Handles}" Width="80" MinWidth="80" ElementStyle="{StaticResource NumText}" />
+                <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="100" MinWidth="84" ElementStyle="{StaticResource CellText}" />
+                <DataGridTemplateColumn x:Name="SignerColumn" Header="Signer" SortMemberPath="Signer" Width="170" MinWidth="120">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Signer}" Foreground="{Binding SignerBrush}" ToolTip="{Binding Signer}" Style="{StaticResource CellText}" />
@@ -79,11 +90,12 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" MinWidth="140" ElementStyle="{StaticResource CellText}" />
-                <DataGridTextColumn Header="Command line" Binding="{Binding CommandLine}" Width="300" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Command line" Binding="{Binding CommandLine}" Width="300" MinWidth="140" ElementStyle="{StaticResource CellText}" />
             </DataGrid.Columns>
             <DataGrid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Details…" InputGestureText="Enter" FontWeight="Bold" Click="Details_Click" />
+                    <MenuItem Header="Analyze wait chain" Click="WaitChain_Click" />
                     <Separator />
                     <MenuItem Header="End task" InputGestureText="Del" Click="End_Click" />
                     <MenuItem Header="End process tree" Click="EndTree_Click" />
