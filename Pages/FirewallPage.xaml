@@ -17,9 +17,8 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="ProfileState" TargetType="TextBlock" BasedOn="{StaticResource StatValue}">
+        <Style x:Key="ProfileState" TargetType="TextBlock" BasedOn="{StaticResource StatBig}">
             <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Enabled}" Value="False">
                     <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
@@ -33,16 +32,13 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition MinHeight="90" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <DockPanel Margin="0,0,0,10">
-            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
-            <Button DockPanel.Dock="Right" Content="Open Windows Defender Firewall" Click="OpenFirewall_Click" />
-            <TextBlock Text="Firewall" Style="{StaticResource PageTitle}" />
-        </DockPanel>
+        <TextBlock Text="Firewall" Style="{StaticResource PageTitle}" />
         <c:AdminNote Grid.Row="1" Text="Changing a rule or turning the firewall on or off needs administrator rights." />
-        <ItemsControl x:Name="Profiles" Grid.Row="2" Margin="0,0,-8,0" Focusable="False">
+        <ItemsControl x:Name="Profiles" Grid.Row="2" Margin="0,12,-12,0" Focusable="False">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <UniformGrid Rows="1" />
@@ -50,58 +46,60 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border Style="{StaticResource Card}" Padding="12,8" Margin="0,0,8,0" ToolTip="{Binding DefaultsHint}">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Margin="0,0,8,0">
-                                <DockPanel>
-                                    <TextBlock DockPanel.Dock="Right" Text="{Binding ActiveText}" Style="{StaticResource StatLabel}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
-                                    <TextBlock Text="{Binding Name}" Style="{StaticResource CardTitle}" />
-                                </DockPanel>
+                    <Border Style="{StaticResource Card}" Margin="0,0,12,0" ToolTip="{Binding DefaultsHint}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="{Binding ToggleText}" Tag="{Binding}" Margin="8,0,0,0" VerticalAlignment="Center" Click="ProfileToggle_Click" />
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}" Style="{StaticResource StatLabel}" />
+                                    <TextBlock Text="{Binding ActiveText}" Style="{StaticResource StatLabel}" Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0" />
+                                </StackPanel>
                                 <TextBlock Text="{Binding StateText}" Style="{StaticResource ProfileState}" />
+                                <TextBlock Text="{Binding DefaultsText}" FontSize="12" Style="{StaticResource Subtle}" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
-                            <Button Grid.Column="1" Content="{Binding ToggleText}" Tag="{Binding}" VerticalAlignment="Center" Click="ProfileToggle_Click" />
-                            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding DefaultsText}" Style="{StaticResource StatLabel}" />
-                        </Grid>
+                        </DockPanel>
                     </Border>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <StackPanel Grid.Row="3" Margin="0,10,0,8">
-            <DockPanel>
-                <TextBlock x:Name="CountText" DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
-                <c:SearchBox x:Name="Search" Placeholder="Search name, program, port or group" />
-            </DockPanel>
-            <WrapPanel Margin="0,6,0,0">
-                <ComboBox x:Name="DirectionFilter" Margin="0,2,8,2" MinWidth="120" SelectedIndex="0" SelectionChanged="Filter_Changed">
-                    <ComboBoxItem Content="Any direction" />
-                    <ComboBoxItem Content="Inbound" />
-                    <ComboBoxItem Content="Outbound" />
-                </ComboBox>
-                <ComboBox x:Name="ActionFilter" Margin="0,2,8,2" MinWidth="110" SelectedIndex="0" SelectionChanged="Filter_Changed">
-                    <ComboBoxItem Content="Any action" />
-                    <ComboBoxItem Content="Allow" />
-                    <ComboBoxItem Content="Block" />
-                </ComboBox>
-                <ComboBox x:Name="EnabledFilter" Margin="0,2,8,2" MinWidth="110" SelectedIndex="0" SelectionChanged="Filter_Changed">
-                    <ComboBoxItem Content="Any state" />
-                    <ComboBoxItem Content="Enabled" />
-                    <ComboBoxItem Content="Disabled" />
-                </ComboBox>
-                <CheckBox x:Name="NonMicrosoft" Content="Non-Microsoft rules" Margin="0,2,12,2" Click="Filter_Changed" />
-                <Button x:Name="EnableButton" Content="Enable" Margin="0,2,8,2" IsEnabled="False" Click="Enable_Click" />
-                <Button x:Name="DisableButton" Content="Disable" Margin="0,2,8,2" IsEnabled="False" Click="Disable_Click" />
-                <Button x:Name="DeleteButton" Content="Delete" Margin="0,2,0,2" IsEnabled="False" Click="Delete_Click" />
-            </WrapPanel>
-        </StackPanel>
-        <DataGrid x:Name="List" Grid.Row="4" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionChanged="List_SelectionChanged">
+        <Grid Grid.Row="3" Style="{StaticResource Toolbar}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1000*" MinWidth="170" MaxWidth="300" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <c:SearchBox x:Name="Search" Placeholder="Search name, program, port or group" />
+            <ComboBox x:Name="DirectionFilter" Grid.Column="1" Margin="10,0,0,0" MinWidth="120" SelectedIndex="0" SelectionChanged="Filter_Changed">
+                <ComboBoxItem Content="Any direction" />
+                <ComboBoxItem Content="Inbound" />
+                <ComboBoxItem Content="Outbound" />
+            </ComboBox>
+            <ComboBox x:Name="ActionFilter" Grid.Column="2" Margin="10,0,0,0" MinWidth="110" SelectedIndex="0" SelectionChanged="Filter_Changed">
+                <ComboBoxItem Content="Any action" />
+                <ComboBoxItem Content="Allow" />
+                <ComboBoxItem Content="Block" />
+            </ComboBox>
+            <ComboBox x:Name="EnabledFilter" Grid.Column="3" Margin="10,0,0,0" MinWidth="110" SelectedIndex="0" SelectionChanged="Filter_Changed">
+                <ComboBoxItem Content="Any state" />
+                <ComboBoxItem Content="Enabled" />
+                <ComboBoxItem Content="Disabled" />
+            </ComboBox>
+            <CheckBox x:Name="NonMicrosoft" Grid.Column="4" Content="Non-Microsoft rules" Margin="14,0,0,0" VerticalAlignment="Center" Click="Filter_Changed" />
+            <TextBlock x:Name="CountText" Grid.Column="5" Style="{StaticResource ToolbarCount}" />
+            <Button Grid.Column="7" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+        </Grid>
+        <WrapPanel Grid.Row="4" Style="{StaticResource ActionRow}">
+            <Button x:Name="EnableButton" Content="Enable" Margin="0,0,8,8" IsEnabled="False" Click="Enable_Click" />
+            <Button x:Name="DisableButton" Content="Disable" Margin="0,0,8,8" IsEnabled="False" Click="Disable_Click" />
+            <Button x:Name="DeleteButton" Content="Delete" Margin="0,0,16,8" IsEnabled="False" Click="Delete_Click" />
+            <Button Content="Open Windows Defender Firewall" Margin="0,0,8,8" Click="OpenFirewall_Click" />
+        </WrapPanel>
+        <DataGrid x:Name="List" Grid.Row="5" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionChanged="List_SelectionChanged">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="220" ElementStyle="{StaticResource CellText}" />
                 <DataGridTextColumn Header="Direction" Binding="{Binding DirectionText}" Width="84" MinWidth="84" ElementStyle="{StaticResource CellText}" />
@@ -123,10 +121,10 @@
                 </ContextMenu>
             </DataGrid.ContextMenu>
         </DataGrid>
-        <TextBlock x:Name="EmptyText" Grid.Row="4" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="12,44,12,0" Visibility="Collapsed" />
-        <Border x:Name="DetailsPane" Grid.Row="5" Style="{StaticResource Card}" Margin="0,8,0,0" Padding="12,8" Visibility="Collapsed">
+        <TextBlock x:Name="EmptyText" Grid.Row="5" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
+        <Border x:Name="DetailsPane" Grid.Row="6" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
             <StackPanel>
-                <TextBlock x:Name="DetailTitle" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="DetailTitle" Style="{StaticResource CardHeading}" />
                 <TextBlock x:Name="DetailDesc" Style="{StaticResource Subtle}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
                 <TextBlock x:Name="DetailProgram" Style="{StaticResource Subtle}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
             </StackPanel>

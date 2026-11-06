@@ -60,38 +60,46 @@
         </Grid.RowDefinitions>
         <TextBlock Text="Docker" Style="{StaticResource PageTitle}" />
 
-        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="14,10" Margin="0,12,0,10">
+        <Border Grid.Row="1" Style="{StaticResource SlimCard}" Margin="0,12,0,0">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
                     <Button x:Name="InstallButton" Content="Install Docker Desktop" Margin="0,0,8,0" Visibility="Collapsed" Click="Install_Click" />
                     <Button x:Name="StartButton" Content="Start Docker" Margin="0,0,8,0" Visibility="Collapsed" Click="StartDocker_Click" />
+                    <Button x:Name="HideOutputButton" Content="Hide output" Margin="0,0,8,0" Visibility="Collapsed" Click="HideOutput_Click"
+                            ToolTip="Gives the room back to the page." />
                     <Button Content="Refresh" Click="Refresh_Click" />
                 </StackPanel>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock x:Name="StatusTitle" Text="Checking for Docker…" FontWeight="SemiBold" Foreground="#F2F5F8" />
+                    <TextBlock x:Name="StatusTitle" Text="Checking for Docker…" Style="{StaticResource CardHeading}" />
                     <TextBlock x:Name="StatusText" Style="{StaticResource Subtle}" Margin="0,3,0,0" TextWrapping="Wrap" />
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <TabControl x:Name="Tabs" Grid.Row="2" SelectionChanged="Tabs_SelectionChanged">
+        <TabControl x:Name="Tabs" Grid.Row="2" Margin="0,10,0,0" SelectionChanged="Tabs_SelectionChanged">
             <TabItem Header="Containers">
                 <Grid Margin="0,10,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition MinHeight="60" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
-                        <Button x:Name="ContainerStart" Content="Start" Margin="0,0,6,8" IsEnabled="False" Click="ContainerStart_Click" />
-                        <Button x:Name="ContainerStop" Content="Stop" Margin="0,0,6,8" IsEnabled="False" Click="ContainerStop_Click" />
-                        <Button x:Name="ContainerRestart" Content="Restart" Margin="0,0,6,8" IsEnabled="False" Click="ContainerRestart_Click" />
-                        <Button x:Name="ContainerRemove" Content="Remove" Margin="0,0,14,8" IsEnabled="False" Click="ContainerRemove_Click" />
-                        <Button x:Name="ContainerLogs" Content="Logs" Margin="0,0,6,8" IsEnabled="False" Click="ContainerLogs_Click" />
-                        <Button x:Name="ContainerShell" Content="Shell" Margin="0,0,6,8" IsEnabled="False" Click="ContainerShell_Click"
+                    <WrapPanel Style="{StaticResource ActionRow}">
+                        <Button x:Name="ContainerStart" Content="Start" Margin="0,0,8,8" IsEnabled="False" Click="ContainerStart_Click" />
+                        <Button x:Name="ContainerStop" Content="Stop" Margin="0,0,8,8" IsEnabled="False" Click="ContainerStop_Click" />
+                        <Button x:Name="ContainerRestart" Content="Restart" Margin="0,0,8,8" IsEnabled="False" Click="ContainerRestart_Click" />
+                        <Button x:Name="ContainerRemove" Content="Remove" Margin="0,0,16,8" IsEnabled="False" Click="ContainerRemove_Click" />
+                        <Button x:Name="ContainerEdit" Content="Edit…" Margin="0,0,8,8" IsEnabled="False" Click="ContainerEdit_Click"
+                                ToolTip="Change its ports, storage, settings and more." />
+                        <Button x:Name="ContainerUpdate" Content="Update…" Margin="0,0,16,8" IsEnabled="False" Click="ContainerUpdate_Click"
+                                ToolTip="Get the newest image and carry on with the same settings." />
+                        <Button x:Name="ContainerLogs" Content="Logs" Margin="0,0,8,8" IsEnabled="False" Click="ContainerLogs_Click" />
+                        <Button x:Name="ContainerShell" Content="Shell" Margin="0,0,8,8" IsEnabled="False" Click="ContainerShell_Click"
                                 ToolTip="Opens a command prompt inside the container." />
-                        <Button x:Name="ContainerInspect" Content="Inspect" Margin="0,0,6,8" IsEnabled="False" Click="ContainerInspect_Click" />
-                        <Button x:Name="ContainerOpen" Content="Open in browser" Margin="0,0,14,8" IsEnabled="False" Click="ContainerOpen_Click" />
-                        <TextBlock x:Name="ContainerCount" Margin="0,0,0,8" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+                        <Button x:Name="ContainerInspect" Content="Inspect" Margin="0,0,8,8" IsEnabled="False" Click="ContainerInspect_Click" />
+                        <Button x:Name="ContainerOpen" Content="Open in browser" Margin="0,0,16,8" IsEnabled="False" Click="ContainerOpen_Click" />
+                        <Button x:Name="CheckUpdates" Content="Check for updates" Margin="0,0,8,8" IsEnabled="False" Click="CheckUpdates_Click"
+                                ToolTip="Asks each image's registry whether there's a newer one. Downloads nothing." />
+                        <TextBlock x:Name="ContainerCount" Style="{StaticResource ToolbarCount}" Margin="4,0,0,8" />
                     </WrapPanel>
                     <DataGrid x:Name="Containers" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                               SelectionChanged="Selection_Changed" MouseDoubleClick="Containers_MouseDoubleClick">
@@ -108,12 +116,12 @@
                             <DataGridTextColumn Header="CPU" Binding="{Binding Cpu}" Width="70" MinWidth="70" ElementStyle="{StaticResource NumText}" />
                             <DataGridTextColumn Header="Memory" Binding="{Binding Memory}" Width="130" MinWidth="130" ElementStyle="{StaticResource NumText}" />
                             <DataGridTextColumn Header="Image" Binding="{Binding Image}" Width="*" MinWidth="170" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn x:Name="ContainerUpdateColumn" Header="Update" Binding="{Binding UpdateText}" Width="100" MinWidth="100" ElementStyle="{StaticResource CellText}" Visibility="Collapsed" />
                             <DataGridTextColumn Header="Ports" Binding="{Binding Ports}" Width="*" MinWidth="170" ElementStyle="{StaticResource CellText}" />
                             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="130" MinWidth="130" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="ContainersEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+                    <TextBlock x:Name="ContainersEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                 </Grid>
             </TabItem>
             <TabItem Header="Images">
@@ -122,13 +130,13 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition MinHeight="60" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
-                        <TextBox x:Name="PullBox" Width="240" Margin="0,0,6,8" VerticalContentAlignment="Center" KeyDown="PullBox_KeyDown"
+                    <WrapPanel Style="{StaticResource ActionRow}">
+                        <TextBox x:Name="PullBox" Width="240" Margin="0,0,8,8" VerticalContentAlignment="Center" KeyDown="PullBox_KeyDown"
                                  ToolTip="An image name, such as nginx:latest" AutomationProperties.Name="Image to pull" />
-                        <Button x:Name="PullButton" Content="Pull" Margin="0,0,14,8" IsEnabled="False" Click="Pull_Click" />
-                        <Button x:Name="ImageRemove" Content="Remove" Margin="0,0,6,8" IsEnabled="False" Click="ImageRemove_Click" />
-                        <Button x:Name="ImagePrune" Content="Remove unused" Margin="0,0,14,8" IsEnabled="False" Click="ImagePrune_Click" />
-                        <TextBlock x:Name="ImageCount" Margin="0,0,0,8" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+                        <Button x:Name="PullButton" Content="Pull" Margin="0,0,16,8" IsEnabled="False" Click="Pull_Click" />
+                        <Button x:Name="ImageRemove" Content="Remove" Margin="0,0,8,8" IsEnabled="False" Click="ImageRemove_Click" />
+                        <Button x:Name="ImagePrune" Content="Remove unused" Margin="0,0,8,8" IsEnabled="False" Click="ImagePrune_Click" />
+                        <TextBlock x:Name="ImageCount" Style="{StaticResource ToolbarCount}" Margin="4,0,0,8" />
                     </WrapPanel>
                     <DataGrid x:Name="Images" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="Selection_Changed">
                         <DataGrid.Columns>
@@ -139,8 +147,7 @@
                             <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="120" MinWidth="120" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="ImagesEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+                    <TextBlock x:Name="ImagesEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                 </Grid>
             </TabItem>
             <TabItem Header="Volumes">
@@ -149,10 +156,10 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition MinHeight="60" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
-                        <Button x:Name="VolumeRemove" Content="Remove" Margin="0,0,6,8" IsEnabled="False" Click="VolumeRemove_Click" />
-                        <Button x:Name="VolumePrune" Content="Remove unused" Margin="0,0,14,8" IsEnabled="False" Click="VolumePrune_Click" />
-                        <TextBlock x:Name="VolumeCount" Margin="0,0,0,8" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+                    <WrapPanel Style="{StaticResource ActionRow}">
+                        <Button x:Name="VolumeRemove" Content="Remove" Margin="0,0,8,8" IsEnabled="False" Click="VolumeRemove_Click" />
+                        <Button x:Name="VolumePrune" Content="Remove unused" Margin="0,0,8,8" IsEnabled="False" Click="VolumePrune_Click" />
+                        <TextBlock x:Name="VolumeCount" Style="{StaticResource ToolbarCount}" Margin="4,0,0,8" />
                     </WrapPanel>
                     <DataGrid x:Name="Volumes" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="Selection_Changed">
                         <DataGrid.Columns>
@@ -160,8 +167,7 @@
                             <DataGridTextColumn Header="Driver" Binding="{Binding Driver}" Width="120" MinWidth="120" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="VolumesEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+                    <TextBlock x:Name="VolumesEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                 </Grid>
             </TabItem>
             <TabItem Header="Networks">
@@ -169,12 +175,25 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition MinHeight="60" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
-                        <Button x:Name="NetworkRemove" Content="Remove" Margin="0,0,14,8" IsEnabled="False" Click="NetworkRemove_Click" />
-                        <TextBlock x:Name="NetworkCount" Margin="0,0,0,8" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+                    <WrapPanel Style="{StaticResource ActionRow}">
+                        <Button x:Name="NetworkNew" Content="New network…" Margin="0,0,8,8" IsEnabled="False" Click="NetworkNew_Click" />
+                        <Button x:Name="NetworkRemove" Content="Remove" Margin="0,0,16,8" IsEnabled="False" Click="NetworkRemove_Click" />
+                        <Button x:Name="NetworkTidy" Content="Tidy up" Margin="0,0,8,8" Click="NetworkTidy_Click"
+                                ToolTip="Puts every box back in order." />
+                        <Button x:Name="NetworkView" Content="Show as list" Margin="0,0,8,8" Click="NetworkView_Click" />
+                        <TextBlock x:Name="NetworkCount" Style="{StaticResource ToolbarCount}" Margin="4,0,0,8" />
                     </WrapPanel>
-                    <DataGrid x:Name="Networks" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="Selection_Changed">
+                    <Border x:Name="MapFrame" Grid.Row="1" Style="{StaticResource Card}" Padding="0">
+                        <DockPanel>
+                            <TextBlock x:Name="MapHint" DockPanel.Dock="Bottom" Style="{StaticResource Subtle}" Margin="10,4,10,5" TextTrimming="CharacterEllipsis" />
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Focusable="False">
+                                <c:DockerNetworkMap x:Name="Map" />
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                    <DataGrid x:Name="Networks" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="Selection_Changed" Visibility="Collapsed">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Network" Binding="{Binding Name}" Width="*" MinWidth="240" ElementStyle="{StaticResource CellText}" />
                             <DataGridTextColumn Header="Driver" Binding="{Binding Driver}" Width="120" MinWidth="120" ElementStyle="{StaticResource CellText}" />
@@ -182,8 +201,21 @@
                             <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="120" MinWidth="120" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="NetworksEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+                    <TextBlock x:Name="NetworksEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
+                    <Border x:Name="MapChanges" Grid.Row="2" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" Margin="10,0,0,0">
+                                <Button x:Name="MapApply" Content="Apply" MinWidth="80" Margin="0,0,0,8" Click="MapApply_Click" />
+                                <Button x:Name="MapDiscard" Content="Discard" MinWidth="80" Click="MapDiscard_Click" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="WILL RUN" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
+                                <TextBox x:Name="MapPreview" IsReadOnly="True" TextWrapping="Wrap" Height="52" VerticalContentAlignment="Top"
+                                         VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Commands that will run" />
+                                <TextBlock x:Name="MapWarnings" Foreground="{StaticResource WarnBrush}" TextWrapping="Wrap" Margin="0,4,0,0" Visibility="Collapsed" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
                 </Grid>
             </TabItem>
             <TabItem Header="Stacks">
@@ -192,24 +224,28 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition MinHeight="60" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
-                        <Button x:Name="StackStart" Content="Start" Margin="0,0,6,8" IsEnabled="False" Click="StackStart_Click" />
-                        <Button x:Name="StackStop" Content="Stop" Margin="0,0,6,8" IsEnabled="False" Click="StackStop_Click" />
-                        <Button x:Name="StackRestart" Content="Restart" Margin="0,0,6,8" IsEnabled="False" Click="StackRestart_Click" />
-                        <Button x:Name="StackRemove" Content="Remove" Margin="0,0,14,8" IsEnabled="False" Click="StackRemove_Click" />
-                        <Button x:Name="StackLogs" Content="Logs" Margin="0,0,6,8" IsEnabled="False" Click="StackLogs_Click" />
-                        <Button x:Name="StackFolder" Content="Open folder" Margin="0,0,14,8" IsEnabled="False" Click="StackFolder_Click" />
-                        <TextBlock x:Name="StackCount" Margin="0,0,0,8" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+                    <WrapPanel Style="{StaticResource ActionRow}">
+                        <Button x:Name="StackStart" Content="Start" Margin="0,0,8,8" IsEnabled="False" Click="StackStart_Click" />
+                        <Button x:Name="StackStop" Content="Stop" Margin="0,0,8,8" IsEnabled="False" Click="StackStop_Click" />
+                        <Button x:Name="StackRestart" Content="Restart" Margin="0,0,8,8" IsEnabled="False" Click="StackRestart_Click" />
+                        <Button x:Name="StackRemove" Content="Remove" Margin="0,0,16,8" IsEnabled="False" Click="StackRemove_Click" />
+                        <Button x:Name="StackEdit" Content="Edit…" Margin="0,0,8,8" IsEnabled="False" Click="StackEdit_Click"
+                                ToolTip="Change its Compose file and settings." />
+                        <Button x:Name="StackUpdate" Content="Update…" Margin="0,0,16,8" IsEnabled="False" Click="StackUpdate_Click"
+                                ToolTip="Get the newest images and carry on with the same settings." />
+                        <Button x:Name="StackLogs" Content="Logs" Margin="0,0,8,8" IsEnabled="False" Click="StackLogs_Click" />
+                        <Button x:Name="StackFolder" Content="Open folder" Margin="0,0,8,8" IsEnabled="False" Click="StackFolder_Click" />
+                        <TextBlock x:Name="StackCount" Style="{StaticResource ToolbarCount}" Margin="4,0,0,8" />
                     </WrapPanel>
                     <DataGrid x:Name="Stacks" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="Selection_Changed">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Stack" Binding="{Binding Name}" Width="200" MinWidth="200" ElementStyle="{StaticResource CellText}" />
                             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="160" MinWidth="160" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn x:Name="StackUpdateColumn" Header="Update" Binding="{Binding Update}" Width="100" MinWidth="100" ElementStyle="{StaticResource CellText}" Visibility="Collapsed" />
                             <DataGridTextColumn Header="Compose file" Binding="{Binding ConfigFiles}" Width="*" MinWidth="240" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="StacksEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+                    <TextBlock x:Name="StacksEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                 </Grid>
             </TabItem>
             <TabItem Header="Quick deploy">
@@ -219,22 +255,32 @@
                         <RowDefinition MinHeight="90" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <DockPanel Margin="0,0,0,10">
-                        <Button x:Name="ListsButton" DockPanel.Dock="Right" Content="Template lists…" Margin="8,0,0,0" Click="Lists_Click"
-                                ToolTip="Choose which lists Quick deploy reads." />
-                        <Button x:Name="UpdateListButton" DockPanel.Dock="Right" Content="Update" Margin="8,0,0,0" Click="UpdateList_Click"
-                                ToolTip="Downloads every list again." />
-                        <c:SearchBox x:Name="TemplateSearch" Width="220" Placeholder="Search apps" />
-                        <ComboBox x:Name="CategoryFilter" Margin="10,0,0,0" MinWidth="150" SelectedIndex="0" SelectionChanged="TemplateFilter_Changed">
+                    <!-- A crowded row: the search box gives way first, between 170 and 300, so the count can be read in full. -->
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="170" MaxWidth="300" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <c:SearchBox x:Name="TemplateSearch" Placeholder="Search apps" />
+                        <ComboBox x:Name="CategoryFilter" Grid.Column="1" Margin="10,0,0,0" MinWidth="150" SelectedIndex="0" SelectionChanged="TemplateFilter_Changed">
                             <ComboBoxItem Content="All categories" />
                         </ComboBox>
-                        <ComboBox x:Name="KindFilter" Margin="10,0,0,0" MinWidth="130" SelectedIndex="0" SelectionChanged="TemplateFilter_Changed">
+                        <ComboBox x:Name="KindFilter" Grid.Column="2" Margin="10,0,0,0" MinWidth="130" SelectedIndex="0" SelectionChanged="TemplateFilter_Changed">
                             <ComboBoxItem Content="All types" />
                             <ComboBoxItem Content="Containers" />
                             <ComboBoxItem Content="Compose stacks" />
+                            <ComboBoxItem Content="My templates" />
                         </ComboBox>
-                        <TextBlock x:Name="TemplateCount" Margin="14,0,0,0" VerticalAlignment="Center" Style="{StaticResource Subtle}" TextTrimming="CharacterEllipsis" />
-                    </DockPanel>
+                        <TextBlock x:Name="TemplateCount" Grid.Column="3" Style="{StaticResource ToolbarCount}" />
+                        <Button x:Name="ListsButton" Grid.Column="4" Content="Template lists…" Margin="8,0,0,0" Click="Lists_Click"
+                                ToolTip="Choose which lists Quick deploy reads." />
+                        <Button x:Name="UpdateListButton" Grid.Column="5" Content="Update" Margin="8,0,0,0" Click="UpdateList_Click"
+                                ToolTip="Downloads every list again." />
+                    </Grid>
 
                     <ItemsControl x:Name="Gallery" Grid.Row="1" Focusable="False" SizeChanged="Gallery_SizeChanged"
                                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
@@ -269,7 +315,7 @@
                                                     </Grid.ColumnDefinitions>
                                                     <ContentControl Content="{Binding Icon}" ContentTemplate="{StaticResource AppIconTile}" Height="44" VerticalAlignment="Top" Focusable="False" />
                                                     <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                                        <TextBlock Text="{Binding Title}" FontWeight="Bold" Foreground="#F2F5F8" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding Title}" FontWeight="Bold" Foreground="{StaticResource TitleBrush}" TextTrimming="CharacterEllipsis" />
                                                         <TextBlock Text="{Binding Tag}" FontSize="10" Foreground="{StaticResource LabelBrush}" TextTrimming="CharacterEllipsis" Margin="0,1,0,3" />
                                                         <TextBlock Text="{Binding Description}" Style="{StaticResource Subtle}" TextWrapping="Wrap" MaxHeight="34" TextTrimming="CharacterEllipsis" />
                                                     </StackPanel>
@@ -281,18 +327,19 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock x:Name="GalleryEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+                    <TextBlock x:Name="GalleryEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
 
-                    <Border Grid.Row="2" Style="{StaticResource Card}" Padding="12,8" Margin="0,4,0,0">
+                    <Border Grid.Row="2" Style="{StaticResource SlimCard}" Margin="0,10,0,0">
                         <DockPanel>
-                            <Button x:Name="DeployButton" DockPanel.Dock="Right" Content="Deploy…" VerticalAlignment="Center" Margin="10,0,0,0" IsEnabled="False" Click="Deploy_Click" />
+                            <Button x:Name="DeployButton" DockPanel.Dock="Right" Content="Deploy…" VerticalAlignment="Center" Margin="8,0,0,0" IsEnabled="False" Click="Deploy_Click"
+                                    ToolTip="Opens a form where you can change anything before it runs." />
+                            <Button x:Name="TemplateRemove" DockPanel.Dock="Right" Content="Remove template" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="Collapsed" Click="TemplateRemove_Click" />
                             <ComboBox x:Name="VersionPick" DockPanel.Dock="Right" Width="300" VerticalAlignment="Center" Margin="12,0,0,0" Visibility="Collapsed"
                                       DisplayMemberPath="VersionText" SelectionChanged="VersionPick_SelectionChanged" AutomationProperties.Name="Version to deploy"
                                       ToolTip="Different lists offer different builds of this app." />
                             <ContentControl x:Name="DetailIcon" ContentTemplate="{StaticResource AppIconTile}" Width="36" Height="36" Margin="0,0,10,0" Focusable="False" Visibility="Collapsed" />
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock x:Name="DetailTitle" Text="Choose an app" FontWeight="SemiBold" Foreground="#F2F5F8" TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="DetailTitle" Text="Choose an app" Style="{StaticResource CardHeading}" />
                                 <TextBlock x:Name="DetailText" Style="{StaticResource Subtle}" Margin="0,2,0,0" TextWrapping="Wrap" MaxHeight="34" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </DockPanel>

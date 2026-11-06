@@ -16,8 +16,9 @@ public sealed class AdminNote : Border
     public AdminNote()
     {
         Style = (Style)Application.Current.FindResource("Card");
-        Padding = new Thickness(12, 8, 12, 8);
-        Margin = new Thickness(0, 0, 0, 10);
+        Padding = new Thickness(14, 10, 14, 10);
+        // Space above only, like every block under a page title, so nothing shifts when this is hidden for administrators.
+        Margin = new Thickness(0, 10, 0, 0);
         BorderBrush = (Brush)Application.Current.FindResource("WarnBrush");
         Visibility = MainWindow.IsAdmin ? Visibility.Collapsed : Visibility.Visible;
 

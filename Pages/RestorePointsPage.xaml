@@ -10,12 +10,9 @@
             <RowDefinition Height="Auto" />
             <RowDefinition />
         </Grid.RowDefinitions>
-        <DockPanel Margin="0,0,0,12">
-            <Button DockPanel.Dock="Right" Content="Refresh" VerticalAlignment="Center" Click="Refresh_Click" />
-            <TextBlock Text="Restore points" Style="{StaticResource PageTitle}" />
-        </DockPanel>
+        <TextBlock Text="Restore points" Style="{StaticResource PageTitle}" />
         <c:AdminNote Grid.Row="1" Text="Windows only lets administrators see the list of restore points or create one. Without admin, Tman can only show whether System Protection is on." />
-        <Border Grid.Row="2" Style="{StaticResource Card}" Padding="14,10" Margin="0,0,0,10">
+        <Border Grid.Row="2" Style="{StaticResource SlimCard}" Margin="0,12,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition />
@@ -33,12 +30,13 @@
                 </StackPanel>
             </Grid>
         </Border>
-        <WrapPanel Grid.Row="3" Margin="0,0,0,6">
-            <Button x:Name="CreateButton" Content="Create restore point" Margin="0,0,8,4" IsEnabled="False" Click="Create_Click" />
-            <Button Content="Open System Restore" Margin="0,0,8,4" Click="OpenRestore_Click" ToolTip="Windows asks for administrator permission to open this." />
-            <Button Content="System Protection settings" Margin="0,0,8,4" Click="OpenSettings_Click" ToolTip="Windows asks for administrator permission to open this." />
-            <TextBlock x:Name="StatusText" Style="{StaticResource Subtle}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="4,0,0,4" />
-        </WrapPanel>
+        <DockPanel Grid.Row="3" Style="{StaticResource Toolbar}">
+            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+            <Button x:Name="CreateButton" Content="Create restore point" Margin="0,0,8,0" IsEnabled="False" Click="Create_Click" />
+            <Button Content="Open System Restore" Margin="0,0,8,0" Click="OpenRestore_Click" ToolTip="Windows asks for administrator permission to open this." />
+            <Button Content="System Protection settings" Margin="0,0,8,0" Click="OpenSettings_Click" ToolTip="Windows asks for administrator permission to open this." />
+            <TextBlock x:Name="StatusText" Style="{StaticResource Subtle}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="4,0,0,0" />
+        </DockPanel>
         <Grid Grid.Row="4">
             <DataGrid x:Name="List" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single">
                 <DataGrid.Columns>
@@ -47,8 +45,7 @@
                     <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150" ElementStyle="{StaticResource CellText}" />
                 </DataGrid.Columns>
             </DataGrid>
-            <TextBlock x:Name="EmptyText" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"
-                       VerticalAlignment="Center" Margin="24" MaxWidth="460" Visibility="Collapsed" />
+            <TextBlock x:Name="EmptyText" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
         </Grid>
     </Grid>
 </UserControl>

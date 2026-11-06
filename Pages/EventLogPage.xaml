@@ -30,45 +30,44 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition x:Name="ListRow" />
             <RowDefinition x:Name="DetailRow" Height="Auto" />
         </Grid.RowDefinitions>
-        <DockPanel>
-            <TextBlock x:Name="CountText" DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Bottom" Style="{StaticResource Subtle}" />
-            <TextBlock Text="Event log" Style="{StaticResource PageTitle}" />
-        </DockPanel>
-        <c:AdminNote x:Name="AdminStrip" Grid.Row="1" Margin="0,10,0,0"
+        <TextBlock Text="Event log" Style="{StaticResource PageTitle}" />
+        <c:AdminNote x:Name="AdminStrip" Grid.Row="1"
                      Text="The Security log and many smaller logs can only be read as administrator." />
-        <DockPanel Grid.Row="2" Margin="0,12,0,8">
-            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
-            <Button DockPanel.Dock="Right" Content="Open Event Viewer" Margin="8,0,0,0" Click="OpenViewer_Click" />
-            <ComboBox x:Name="RangeBox" DockPanel.Dock="Right" Margin="8,0,0,0" MinWidth="130" SelectedIndex="2" SelectionChanged="Query_Changed">
-                <ComboBoxItem Content="Last hour" />
-                <ComboBoxItem Content="Last 24 hours" />
-                <ComboBoxItem Content="Last 7 days" />
-                <ComboBoxItem Content="Last 30 days" />
-                <ComboBoxItem Content="All time" />
-            </ComboBox>
-            <ComboBox x:Name="LogBox" MinWidth="120" SelectionChanged="Query_Changed" />
-        </DockPanel>
-        <Grid Grid.Row="3" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*" MinWidth="170" />
-                <ColumnDefinition Width="3*" />
-            </Grid.ColumnDefinitions>
-            <c:SearchBox x:Name="Search" Placeholder="Search source, event ID or message" VerticalAlignment="Center" />
-            <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <CheckBox x:Name="CriticalBox" Content="Critical" MinWidth="0" Margin="10,0,0,0" IsChecked="True" Click="Query_Changed" />
-                <CheckBox x:Name="ErrorBox" Content="Error" MinWidth="0" Margin="10,0,0,0" IsChecked="True" Click="Query_Changed" />
-                <CheckBox x:Name="WarningBox" Content="Warning" MinWidth="0" Margin="10,0,0,0" IsChecked="True" Click="Query_Changed" />
-                <CheckBox x:Name="InfoBox" Content="Information" MinWidth="0" Margin="10,0,0,0" IsChecked="True" Click="Query_Changed" />
-                <CheckBox x:Name="GroupBox" Content="Group by source" MinWidth="0" Margin="10,0,0,0" Click="Group_Click" />
+        <!-- Two rows of one toolbar: what to look in, then how to narrow it -->
+        <StackPanel Grid.Row="2" Style="{StaticResource Toolbar}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+                <Button DockPanel.Dock="Right" Content="Open Event Viewer" Margin="8,0,0,0" Click="OpenViewer_Click" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="170" MaxWidth="300" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <c:SearchBox x:Name="Search" Placeholder="Search source, event ID or message" />
+                    <ComboBox x:Name="LogBox" Grid.Column="1" Margin="10,0,0,0" MinWidth="120" SelectionChanged="Query_Changed" />
+                </Grid>
+            </DockPanel>
+            <WrapPanel Margin="0,8,0,0">
+                <ComboBox x:Name="RangeBox" MinWidth="130" VerticalAlignment="Center" SelectedIndex="2" SelectionChanged="Query_Changed">
+                    <ComboBoxItem Content="Last hour" />
+                    <ComboBoxItem Content="Last 24 hours" />
+                    <ComboBoxItem Content="Last 7 days" />
+                    <ComboBoxItem Content="Last 30 days" />
+                    <ComboBoxItem Content="All time" />
+                </ComboBox>
+                <CheckBox x:Name="CriticalBox" Content="Critical" MinWidth="0" Margin="14,0,0,0" VerticalAlignment="Center" IsChecked="True" Click="Query_Changed" />
+                <CheckBox x:Name="ErrorBox" Content="Error" MinWidth="0" Margin="14,0,0,0" VerticalAlignment="Center" IsChecked="True" Click="Query_Changed" />
+                <CheckBox x:Name="WarningBox" Content="Warning" MinWidth="0" Margin="14,0,0,0" VerticalAlignment="Center" IsChecked="True" Click="Query_Changed" />
+                <CheckBox x:Name="InfoBox" Content="Information" MinWidth="0" Margin="14,0,0,0" VerticalAlignment="Center" IsChecked="True" Click="Query_Changed" />
+                <CheckBox x:Name="GroupBox" Content="Group by source" MinWidth="0" Margin="14,0,0,0" VerticalAlignment="Center" Click="Group_Click" />
+                <TextBlock x:Name="CountText" Style="{StaticResource ToolbarCount}" />
             </WrapPanel>
-        </Grid>
-        <TextBlock x:Name="NoteText" Grid.Row="4" Margin="0,0,0,8" TextWrapping="Wrap" Foreground="{StaticResource WarnBrush}" Visibility="Collapsed" />
-        <DataGrid x:Name="List" Grid.Row="5" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+            <TextBlock x:Name="NoteText" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource WarnBrush}" Visibility="Collapsed" />
+        </StackPanel>
+        <DataGrid x:Name="List" Grid.Row="3" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                   VirtualizingPanel.IsVirtualizingWhenGrouping="True" SelectionChanged="List_SelectionChanged">
             <DataGrid.Columns>
                 <DataGridTemplateColumn Header="Level" SortMemberPath="Level" Width="85">
@@ -90,13 +89,12 @@
                 </ContextMenu>
             </DataGrid.ContextMenu>
         </DataGrid>
-        <TextBlock x:Name="EmptyText" Grid.Row="5" Margin="20" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
-                   TextWrapping="Wrap" Visibility="Collapsed" Style="{StaticResource Subtle}" />
-        <Border x:Name="DetailsPane" Grid.Row="6" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="14,10" Visibility="Collapsed">
+        <TextBlock x:Name="EmptyText" Grid.Row="3" Visibility="Collapsed" Style="{StaticResource EmptyText}" />
+        <Border x:Name="DetailsPane" Grid.Row="4" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top">
                     <Button DockPanel.Dock="Right" Content="Copy details" Margin="8,0,0,0" Click="Copy_Click" />
-                    <Button DockPanel.Dock="Right" Content="Search online" Click="SearchOnline_Click" />
+                    <Button DockPanel.Dock="Right" Content="Search online" Margin="8,0,0,0" Click="SearchOnline_Click" />
                     <StackPanel>
                         <TextBlock x:Name="DetailTitle" FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis" />
                         <TextBlock x:Name="DetailSub" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" Style="{StaticResource Subtle}" />

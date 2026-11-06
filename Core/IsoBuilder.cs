@@ -169,8 +169,8 @@ public static class IsoBuilder
         return edition.Bytes + wim * 2 + (media.IsoBytes - media.ImageBytes) + 4 * Gb;
     }
 
-    /// <summary>Whether the work drive can hold a build: DISM can only mount on a local NTFS drive.</summary>
-    public static bool CanWorkOn(DriveInfo d) => d.IsReady && d.DriveType == DriveType.Fixed && d.DriveFormat == "NTFS";
+    /// <summary>Whether the work drive can hold a build: DISM can only mount on a local NTFS drive. The type comes first because asking a busy USB drive if it's ready can take minutes.</summary>
+    public static bool CanWorkOn(DriveInfo d) => d.DriveType == DriveType.Fixed && d.IsReady && d.DriveFormat == "NTFS";
 
     /// <summary>What stops this build from starting, or null when it can go ahead. <c>free</c> and <c>format</c> read a drive, so tests can stand in for real disks.</summary>
     public static string? CheckPlan(IsoPlan plan, IsoMedia media, Func<char, long>? free = null, Func<char, string>? format = null)
@@ -210,21 +210,30 @@ public static class IsoBuilder
     // ---- Answer file ----
 
     /// <summary>
-    /// An answer file for the last stage of Setup only, so Setup still asks which disk to install to. Listing a local account is
-    /// the documented way to deploy without a Microsoft account, and it holds up where the BypassNRO-style workarounds were
-    /// removed. Hiding the network screen matters as much, since that screen is what blocks a PC with no connection.
+    /// An answer file for first-time setup. Nothing here describes a disk, so Setup still asks where to install. Listing a local
+    /// account is the documented way to deploy without a Microsoft account, and hiding the network screen matters as much,
+    /// since that screen is what blocks a PC with no connection.
+    ///
+    /// The windowsPE section is what makes Setup use the file at all. Setup looks for answer files in that stage and drops any
+    /// with no settings for it ("does not meet criteria to be used for this unattend pass"), which silently loses everything
+    /// else. <c>UseConfigurationSet</c> is false by default, so the section is there to be seen and changes nothing.
     /// </summary>
     public static string AnswerFile(string account, string arch)
     {
         XNamespace u = "urn:schemas-microsoft-com:unattend", wcm = "http://schemas.microsoft.com/WMIConfig/2002/State";
-        var doc = new XDocument(new XElement(u + "unattend", new XAttribute(XNamespace.Xmlns + "wcm", wcm),
-            new XElement(u + "settings", new XAttribute("pass", "oobeSystem"),
+        XElement Settings(string pass, string component, params object[] content) =>
+            new(u + "settings", new XAttribute("pass", pass),
                 new XElement(u + "component",
-                    new XAttribute("name", "Microsoft-Windows-Shell-Setup"),
+                    new XAttribute("name", component),
                     new XAttribute("processorArchitecture", arch == "arm64" ? "arm64" : "amd64"),
                     new XAttribute("publicKeyToken", "31bf3856ad364e35"),
                     new XAttribute("language", "neutral"),
                     new XAttribute("versionScope", "nonSxS"),
+                    content));
+        var doc = new XDocument(new XElement(u + "unattend", new XAttribute(XNamespace.Xmlns + "wcm", wcm),
+            Settings("windowsPE", "Microsoft-Windows-Setup",
+                new XElement(u + "UseConfigurationSet", "false")),
+            Settings("oobeSystem", "Microsoft-Windows-Shell-Setup",
                     new XElement(u + "OOBE",
                         new XElement(u + "HideEULAPage", "true"),
                         new XElement(u + "HideOEMRegistrationScreen", "true"),
@@ -239,7 +248,8 @@ public static class IsoBuilder
                                 new XElement(u + "Group", "Administrators"),
                                 new XElement(u + "Password",
                                     new XElement(u + "Value", ""),
-                                    new XElement(u + "PlainText", "true")))))))));
+                                    new XElement(u + "PlainText", "true"))))))
+        ));
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n" + doc;
     }
 
@@ -306,6 +316,7 @@ public static class IsoBuilder
     {
         var work = "";
         string partial = plan.OutputIso + ".partial";
+        BuildJob? job = null;
         JobResult result;
         try
         {
@@ -319,8 +330,8 @@ public static class IsoBuilder
             work = $@"{char.ToUpperInvariant(plan.WorkDrive)}:\{WorkFolderName}\{DateTime.Now:yyyyMMdd-HHmmss}";
             Directory.CreateDirectory(work);
             Journal.Begin(work);
-            var built = new BuildJob(plan, media, work, partial, onLine, cancel);
-            result = await built.RunAsync();
+            job = new BuildJob(plan, media, work, partial, onLine, cancel);
+            result = await job.RunAsync();
         }
         catch (OperationCanceledException)
         {
@@ -339,7 +350,7 @@ public static class IsoBuilder
         if (work.Length == 0) return result;
         onLine("Cleaning up");
         // Deliberately not cancellable. This is the one part that has to finish.
-        if (await ReleaseAsync(work, onLine)) return result;
+        if (await ReleaseAsync(work, onLine, job?.Interrupted ?? true)) return result;
         return new(JobLevel.Bad, $"{result.Text} The image is still mounted at {Path.Combine(work, "mount")}. Tman will try again when it next starts, or open ISO builder and choose Clean up.");
     }
 
@@ -351,6 +362,9 @@ public static class IsoBuilder
         readonly string _tree = Path.Combine(work, "iso"), _mount = Path.Combine(work, "mount"), _scratch = Path.Combine(work, "scratch"), _wim = Path.Combine(work, "install.wim");
         readonly HashSet<string> _removed = new(), _failed = new();
         int _step;
+
+        /// <summary>True while DISM is partway through mounting or saving, when stopping it can leave a half-done mount.</summary>
+        public bool Interrupted { get; private set; }
 
         void Step(string what)
         {
@@ -376,7 +390,9 @@ public static class IsoBuilder
 
             // The journal already covers this folder, so a crash from here on is cleaned up too.
             Step("Mounting the image");
+            Interrupted = true;
             await Dism($"/Mount-Image /ImageFile:\"{_wim}\" /Index:1 /MountDir:\"{_mount}\"", "Mounting the image");
+            Interrupted = false;
 
             Step($"Removing {plan.Remove.Count} items");
             await RemoveApps();
@@ -389,7 +405,9 @@ public static class IsoBuilder
 
             // Stopping this one could leave the image half-written. It's quick, and Stop takes effect straight after.
             Step("Saving the changes");
+            Interrupted = true;
             await Dism($"/Unmount-Image /MountDir:\"{_mount}\" /Commit", "Saving the changes", canStop: false);
+            Interrupted = false;
 
             // Committing only adds to the WIM, so the space isn't back until it's copied into a new one.
             Step("Compressing the image");
@@ -702,11 +720,14 @@ public static class IsoBuilder
         Log(released ? "Cleaned up" : "Cleanup failed. The next start of Tman tries again");
     }
 
-    /// <summary>Discards the mount, then deletes the work folder. The folder stays until the mount has really gone: deleting into a live mount would wreck it.</summary>
-    static async Task<bool> ReleaseAsync(string work, Action<string> onLine)
+    /// <summary>
+    /// Discards the mount, then deletes the work folder. The folder stays until the mount has really gone: deleting into a live
+    /// mount would wreck it. <c>interrupted</c> says a mount may be half done; anything that can't know has to assume so.
+    /// </summary>
+    static async Task<bool> ReleaseAsync(string work, Action<string> onLine, bool interrupted = true)
     {
         StopStrays(work);
-        if (!await DiscardMountAsync(Path.Combine(work, "mount"), onLine)) return false;
+        if (!await DiscardMountAsync(Path.Combine(work, "mount"), onLine, interrupted)) return false;
         var log = new RepairJobs.Log(onLine);
         await Cmd.StreamAsync(Cmd.System("cmd.exe"), $"/d /s /c \"rd /s /q \"{work}\"\"", log.Add);
         if (Directory.Exists(work)) onLine($"Couldn't delete all of {work}. It's safe to delete it yourself.");
@@ -732,25 +753,25 @@ public static class IsoBuilder
         }
     }
 
-    static async Task<bool> DiscardMountAsync(string mount, Action<string> onLine)
+    static async Task<bool> DiscardMountAsync(string mount, Action<string> onLine, bool interrupted)
     {
         const int Attempts = 4;
         var dism = Cmd.System("dism.exe");
-        bool everMounted = false;
+        bool stuck = false;
         for (int attempt = 0; attempt < Attempts; attempt++)
         {
             var status = await MountStatusAsync(mount);
             if (status == null) break;
-            everMounted = true;
             if (attempt > 0) await Task.Delay(TimeSpan.FromSeconds(5 * attempt));
             onLine("Discarding the mounted image");
             // After a restart Windows needs it remounted before it can be let go.
             if (status.Contains("Remount", StringComparison.OrdinalIgnoreCase))
                 await Cmd.StreamAsync(dism, $"/Remount-Image /MountDir:\"{mount}\" /English", onLine);
-            await Cmd.StreamAsync(dism, $"/Unmount-Image /MountDir:\"{mount}\" /Discard /English", onLine);
+            stuck = await Cmd.StreamAsync(dism, $"/Unmount-Image /MountDir:\"{mount}\" /Discard /English", onLine) != 0;
         }
-        // A mount stopped partway may never reach the list above, so this runs whether or not one showed up.
-        if (everMounted || Directory.Exists(mount)) await Cmd.StreamAsync(dism, "/Cleanup-Wim /English", onLine);
+        // This scans the whole drive, which can take minutes, so a mount that let go cleanly skips it. One stopped
+        // partway may never have reached the list above, so that has to go by what the build was doing at the time.
+        if (interrupted || stuck) await Cmd.StreamAsync(dism, "/Cleanup-Wim /English", onLine);
         return await MountStatusAsync(mount) == null;
     }
 

@@ -9,9 +9,6 @@
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
-        <Style x:Key="ActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Margin" Value="0,0,8,6" />
-        </Style>
     </UserControl.Resources>
     <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" SizeChanged="Scroller_SizeChanged">
     <Grid x:Name="Root">
@@ -23,37 +20,36 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <TextBlock Text="Get apps" Style="{StaticResource PageTitle}" />
-        <c:AdminNote Grid.Row="1" Margin="0,10,0,0"
+        <c:AdminNote Grid.Row="1"
                      Text="Apps that install for everyone show a Windows permission prompt, and the queue waits for your answer. As administrator there's no prompt." />
-        <Border x:Name="MissingNote" Grid.Row="2" Style="{StaticResource Card}" Padding="12,8" Margin="0,10,0,0"
+        <Border x:Name="MissingNote" Grid.Row="2" Style="{StaticResource SlimCard}" Margin="0,10,0,0"
                 BorderBrush="{StaticResource BadBrush}" Visibility="Collapsed">
             <TextBlock x:Name="MissingText" TextWrapping="Wrap" />
         </Border>
 
-        <TabControl x:Name="Tabs" Grid.Row="3" Margin="0,10,0,0" SelectionChanged="Tabs_SelectionChanged">
+        <TabControl x:Name="Tabs" Grid.Row="3" Margin="0,12,0,0" SelectionChanged="Tabs_SelectionChanged">
             <TabItem x:Name="BrowseTab" Header="Browse">
                 <Grid Margin="0,10,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
-                        <c:SearchBox x:Name="Search" Placeholder="Search these apps and all of winget" />
+                    <!-- The status can carry a sentence from winget, so it wraps where a plain count would trim. -->
+                    <DockPanel Margin="0,0,0,10">
+                        <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" VerticalAlignment="Center" Click="Refresh_Click" />
+                        <c:SearchBox x:Name="Search" Width="300" VerticalAlignment="Center" Placeholder="Search these apps and all of winget" />
+                        <TextBlock x:Name="BrowseStatus" Style="{StaticResource ToolbarCount}" TextWrapping="Wrap" />
                     </DockPanel>
-                    <TextBlock Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,8"
-                               Text="Installing accepts each app's license and the terms of the winget source for you, so you won't be asked app by app. Read an app's license on its website first if that matters to you." />
-                    <WrapPanel Grid.Row="2">
-                        <Button x:Name="InstallButton" Content="Install selected" Style="{StaticResource ActionButton}" Click="Install_Click" />
-                        <Button x:Name="UninstallButton" Content="Uninstall selected" Style="{StaticResource ActionButton}" Click="Uninstall_Click" />
-                        <Button Content="Clear selection" Style="{StaticResource ActionButton}" Click="ClearSelection_Click" />
-                        <Button Content="Export list" Style="{StaticResource ActionButton}" Click="Export_Click" />
-                        <Button Content="Import list" Style="{StaticResource ActionButton}" Click="Import_Click" />
+                    <WrapPanel Grid.Row="1" Style="{StaticResource ActionRow}">
+                        <Button x:Name="InstallButton" Content="Install selected" Margin="0,0,8,8" Click="Install_Click" />
+                        <Button x:Name="UninstallButton" Content="Uninstall selected" Margin="0,0,8,8" Click="Uninstall_Click" />
+                        <Button Content="Clear selection" Margin="0,0,16,8" Click="ClearSelection_Click" />
+                        <Button Content="Export list" Margin="0,0,8,8" Click="Export_Click" />
+                        <Button Content="Import list" Margin="0,0,8,8" Click="Import_Click" />
                     </WrapPanel>
-                    <Grid Grid.Row="3">
+                    <Grid Grid.Row="2">
                         <DataGrid x:Name="AppList" IsReadOnly="True" SelectionMode="Extended" CanUserSortColumns="False"
                                   VirtualizingPanel.IsVirtualizingWhenGrouping="True">
                             <DataGrid.GroupStyle>
@@ -91,10 +87,10 @@
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                         </DataGrid>
-                        <TextBlock x:Name="BrowseEmpty" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="20,50,20,0"
-                                   VerticalAlignment="Top" Visibility="Collapsed" />
+                        <TextBlock x:Name="BrowseEmpty" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                     </Grid>
-                    <TextBlock x:Name="BrowseStatus" Grid.Row="4" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                    <TextBlock Grid.Row="3" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Text="Installing accepts each app's license and the terms of the winget source for you, so you won't be asked app by app. Read an app's license on its website first if that matters to you." />
                 </Grid>
             </TabItem>
 
@@ -103,13 +99,14 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition />
-                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
-                        <Button x:Name="UpdateSelectedButton" Content="Update selected" Style="{StaticResource ActionButton}" Click="UpdateSelected_Click" />
-                        <Button x:Name="UpdateAllButton" Content="Update all" Style="{StaticResource ActionButton}" Click="UpdateAll_Click" />
-                        <Button Content="Refresh" Style="{StaticResource ActionButton}" Click="Refresh_Click" />
-                    </WrapPanel>
+                    <!-- No search here, so the status leads. It can run to a sentence, so it wraps. -->
+                    <DockPanel Margin="0,0,0,10">
+                        <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" VerticalAlignment="Center" Click="Refresh_Click" />
+                        <Button x:Name="UpdateAllButton" DockPanel.Dock="Right" Content="Update all" Margin="8,0,0,0" VerticalAlignment="Center" Click="UpdateAll_Click" />
+                        <Button x:Name="UpdateSelectedButton" DockPanel.Dock="Right" Content="Update selected" Margin="8,0,0,0" VerticalAlignment="Center" Click="UpdateSelected_Click" />
+                        <TextBlock x:Name="UpdatesStatus" Style="{StaticResource ToolbarCount}" Margin="0" TextWrapping="Wrap" />
+                    </DockPanel>
                     <Grid Grid.Row="1">
                         <DataGrid x:Name="UpdateList" IsReadOnly="True" SelectionMode="Extended">
                             <DataGrid.Columns>
@@ -133,10 +130,8 @@
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                         </DataGrid>
-                        <TextBlock x:Name="UpdatesEmpty" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="20,50,20,0"
-                                   VerticalAlignment="Top" Visibility="Collapsed" />
+                        <TextBlock x:Name="UpdatesEmpty" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                     </Grid>
-                    <TextBlock x:Name="UpdatesStatus" Grid.Row="2" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,0" />
                 </Grid>
             </TabItem>
 
@@ -145,23 +140,21 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="RefreshBuiltIn_Click" />
-                        <c:SearchBox x:Name="BuiltInSearch" Placeholder="Search built-in apps" />
+                    <DockPanel Margin="0,0,0,10">
+                        <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" VerticalAlignment="Center" Click="RefreshBuiltIn_Click" />
+                        <Button DockPanel.Dock="Right" Content="Open Microsoft Store" Margin="8,0,0,0" VerticalAlignment="Center" Click="OpenStore_Click" />
+                        <c:SearchBox x:Name="BuiltInSearch" Width="300" VerticalAlignment="Center" Placeholder="Search built-in apps" />
+                        <TextBlock x:Name="BuiltInStatus" Style="{StaticResource ToolbarCount}" TextWrapping="Wrap" />
                     </DockPanel>
-                    <TextBlock Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,8"
-                               Text="Removing an app affects only your account, and its saved data goes with it. To get an app back, open the Microsoft Store, search for its name and install it." />
-                    <WrapPanel Grid.Row="2">
-                        <Button x:Name="RemoveButton" Content="Remove selected" Style="{StaticResource ActionButton}" Click="Remove_Click" />
-                        <Button Content="Select common extras" Style="{StaticResource ActionButton}" Click="SelectExtras_Click" />
-                        <Button Content="Clear selection" Style="{StaticResource ActionButton}" Click="ClearBuiltIn_Click" />
-                        <Button Content="Open Microsoft Store" Style="{StaticResource ActionButton}" Click="OpenStore_Click" />
+                    <WrapPanel Grid.Row="1" Style="{StaticResource ActionRow}">
+                        <Button x:Name="RemoveButton" Content="Remove selected" Margin="0,0,8,8" Click="Remove_Click" />
+                        <Button Content="Select common extras" Margin="0,0,8,8" Click="SelectExtras_Click" />
+                        <Button Content="Clear selection" Margin="0,0,8,8" Click="ClearBuiltIn_Click" />
                     </WrapPanel>
-                    <Grid Grid.Row="3">
+                    <Grid Grid.Row="2">
                         <DataGrid x:Name="BuiltInList" IsReadOnly="True" SelectionMode="Extended">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Width="36">
@@ -196,15 +189,15 @@
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                         </DataGrid>
-                        <TextBlock x:Name="BuiltInEmpty" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="20,50,20,0"
-                                   VerticalAlignment="Top" Visibility="Collapsed" />
+                        <TextBlock x:Name="BuiltInEmpty" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                     </Grid>
-                    <TextBlock x:Name="BuiltInStatus" Grid.Row="4" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                    <TextBlock Grid.Row="3" Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Text="Removing an app affects only your account, and its saved data goes with it. To get an app back, open the Microsoft Store, search for its name and install it." />
                 </Grid>
             </TabItem>
         </TabControl>
 
-        <Border x:Name="QueuePane" Grid.Row="4" Style="{StaticResource Card}" Padding="12,8" Margin="0,10,0,0" Visibility="Collapsed">
+        <Border x:Name="QueuePane" Grid.Row="4" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top">
                     <Button DockPanel.Dock="Right" Content="Clear finished" Margin="8,0,0,0" Click="ClearQueue_Click" />

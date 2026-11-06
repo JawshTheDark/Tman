@@ -70,7 +70,8 @@ public sealed class AppCard : ObservableObject
         App = app;
         Icon = new AppIcon(app.Title, app.Logos);
         var kinds = string.Join(" · ", app.Versions.Select(v => v.KindText).Distinct());
-        Tag = app.Versions.Count > 1 ? $"{kinds} · {app.Versions.Count} versions" : kinds;
+        Tag = app.Versions.Any(v => v.IsMine) ? $"{DockerMyTemplates.SourceName} · {kinds}"
+            : app.Versions.Count > 1 ? $"{kinds} · {app.Versions.Count} versions" : kinds;
     }
 
     public DockerApp App { get; }
@@ -107,9 +108,11 @@ public sealed class ContainerRow : ObservableObject
     public string Ports => Data.Ports;
     public bool Running => Data.State == "running";
 
-    string _cpu = "", _memory = "";
+    string _cpu = "", _memory = "", _updateText = "";
     public string Cpu { get => _cpu; set => Set(ref _cpu, value); }
     public string Memory { get => _memory; set => Set(ref _memory, value); }
+    /// <summary>Whether a newer image is available. Stays empty until you check.</summary>
+    public string UpdateText { get => _updateText; set => Set(ref _updateText, value); }
 
     public void Update(DockerContainer data)
     {
@@ -127,6 +130,13 @@ public partial class DockerPage : UserControl, IPage
     readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(4) };
     readonly ICollectionView _containerView;
     readonly Dictionary<string, AppIcon> _iconsByImage = new();
+    /// <summary>What the last check found, by container. A replaced container is a new ID, so it needs checking again.</summary>
+    readonly Dictionary<string, ImageUpdate> _updates = new();
+    readonly NetworkDraft _draft = new();
+    DockerMap _map = DockerMap.Empty;
+    bool _showMap = true;
+    List<DockerApp> _listApps = new();
+    TemplateLists _lists = new(new(), 0, new());
     List<AppCard> _cards = new();
     List<string> _listProblems = new();
     AppCard? _selected;
@@ -149,7 +159,17 @@ public partial class DockerPage : UserControl, IPage
             ShowCards();
         };
         _timer.Tick += async (_, _) => await Refresh();
+        Map.DraftChanged += ShowDraft;
+        Map.Hint += text =>
+        {
+            MapHint.Text = text.Length > 0 ? text : MapHelp;
+            UpdateButtons();
+        };
+        Map.ContainerOpened += OpenFromMap;
+        MapHint.Text = MapHelp;
     }
+
+    const string MapHelp = "Drag a container's dot to a network to connect them. Click a line and press Delete to disconnect. Nothing changes until you apply.";
 
     public async void OnShown()
     {
@@ -214,9 +234,10 @@ public partial class DockerPage : UserControl, IPage
                         break;
                     case NetworksTab:
                         Fill(Networks, await DockerCli.NetworksAsync(), NetworkCount, NetworksEmpty, "network", "No networks.", n => n.Id);
+                        if (_showMap) await ShowMap();
                         break;
                     case StacksTab:
-                        Fill(Stacks, await DockerCli.StacksAsync(), StackCount, StacksEmpty, "stack", "No Compose stacks yet. Deploy one from Quick deploy.", s => s.Name);
+                        Fill(Stacks, WithUpdates(await DockerCli.StacksAsync()), StackCount, StacksEmpty, "stack", "No Compose stacks yet. Deploy one from Quick deploy.", s => s.Name);
                         break;
                 }
             }
@@ -259,6 +280,7 @@ public partial class DockerPage : UserControl, IPage
     {
         var fresh = list.Items.ToDictionary(c => c.Id);
         foreach (var gone in _containers.Where(c => !fresh.ContainsKey(c.Id)).ToList()) _containers.Remove(gone);
+        foreach (var gone in _updates.Keys.Where(id => !fresh.ContainsKey(id)).ToList()) _updates.Remove(gone);
         foreach (var data in list.Items)
         {
             if (_containers.FirstOrDefault(c => c.Id == data.Id) is { } row) row.Update(data);
@@ -270,6 +292,13 @@ public partial class DockerPage : UserControl, IPage
         ContainersEmpty.Text = list.Error != null ? $"Can't list containers. {list.Error}" : "No containers yet. Quick deploy is the fastest way to start one.";
         ContainersEmpty.Visibility = _containers.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         if (_status != null) ShowStatus(_status);
+    }
+
+    /// <summary>Marks the stacks holding a container with a newer image, once a check has found one.</summary>
+    DockerList<DockerStack> WithUpdates(DockerList<DockerStack> list)
+    {
+        var newer = _containers.Where(c => _updates.GetValueOrDefault(c.Id) == ImageUpdate.Newer).Select(c => c.Data.Stack).ToHashSet();
+        return list with { Items = list.Items.Select(s => s with { Update = newer.Contains(s.Name) ? DockerUpdates.Describe(ImageUpdate.Newer) : "" }).ToList() };
     }
 
     ContainerRow WithIcon(ContainerRow row)
@@ -309,6 +338,10 @@ public partial class DockerPage : UserControl, IPage
         _containers.Clear();
         var message = _status?.State == DockerState.NotInstalled ? "Docker isn't installed." : "Docker isn't running.";
         foreach (var grid in new[] { Images, Volumes, Networks, Stacks }) grid.ItemsSource = null;
+        _map = DockerMap.Empty;
+        _draft.Clear();
+        Map.Show(_map, _draft);
+        ShowDraft();
         foreach (var count in new[] { ContainerCount, ImageCount, VolumeCount, NetworkCount, StackCount }) count.Text = "";
         foreach (var empty in new[] { ContainersEmpty, ImagesEmpty, VolumesEmpty, NetworksEmpty, StacksEmpty })
         {
@@ -331,8 +364,13 @@ public partial class DockerPage : UserControl, IPage
         ImageRemove.IsEnabled = ready && SelectedImage != null;
         ImagePrune.IsEnabled = VolumePrune.IsEnabled = ready;
         VolumeRemove.IsEnabled = ready && SelectedVolume != null;
-        NetworkRemove.IsEnabled = ready && SelectedNetwork is { BuiltIn: false };
+        NetworkRemove.IsEnabled = ready && (_showMap ? Map.SelectedNetwork is not (null or "bridge" or "host" or "none") : SelectedNetwork is { BuiltIn: false });
+        NetworkNew.IsEnabled = ready;
+        MapApply.IsEnabled = ready;
+        ContainerEdit.IsEnabled = ContainerUpdate.IsEnabled = ready && c != null;
+        CheckUpdates.IsEnabled = ready && _containers.Count > 0;
         StackStart.IsEnabled = StackStop.IsEnabled = StackRestart.IsEnabled = StackRemove.IsEnabled = ready && SelectedStack != null;
+        StackEdit.IsEnabled = StackUpdate.IsEnabled = ready && SelectedStack != null;
         StackLogs.IsEnabled = DockerUp && SelectedStack != null;
         StackFolder.IsEnabled = SelectedStack is { ConfigFiles.Length: > 0 };
         DeployButton.IsEnabled = ready && SelectedTemplate is { } t && t.CantDeploy(_status?.EngineOs) == null;
@@ -346,6 +384,7 @@ public partial class DockerPage : UserControl, IPage
         _job = new CancellationTokenSource();
         var job = _job;
         Output.Visibility = Visibility.Visible;
+        HideOutputButton.Visibility = Visibility.Collapsed;
         Output.Start(title, canStop ? () => job.Cancel() : null);
         UpdateButtons();
         return job.Token;
@@ -359,12 +398,17 @@ public partial class DockerPage : UserControl, IPage
     async Task End(JobResult result)
     {
         Output.Finish(result);
+        HideOutputButton.Visibility = Visibility.Visible;
         _busy = false;
         _job?.Dispose();
         _job = null;
         UpdateButtons();
         await Refresh();
     }
+
+    void HideOutput_Click(object sender, RoutedEventArgs e) => HideOutput();
+
+    void HideOutput() => Output.Visibility = HideOutputButton.Visibility = Visibility.Collapsed;
 
     static JobResult ResultOf(int code, string done) =>
         code == 0 ? new JobResult(JobLevel.Good, done)
@@ -445,6 +489,148 @@ public partial class DockerPage : UserControl, IPage
     }
 
     void ShowOutput(string title, params string[] args) => new DockerOutputWindow(title, args) { Owner = Window.GetWindow(this) }.Show();
+
+    async void ContainerEdit_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedContainer is { } c) await EditContainer(c);
+    }
+
+    async Task EditContainer(ContainerRow c)
+    {
+        if (_busy) return;
+        if (c.Data.Stack.Length > 0)
+        {
+            await EditStack(c.Data.Stack);
+            return;
+        }
+        if (await ReadChange(c, update: false) is not { } change) return;
+        var form = new DockerDeployDialog(change, await NetworkNames()) { Owner = Window.GetWindow(this) };
+        form.TemplateSaved += ShowMine;
+        if (form.ShowDialog() != true) return;
+        var cancel = Begin($"Change {c.Name}");
+        await End(await change.RunAsync(ShowLine, cancel));
+    }
+
+    async void ContainerUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedContainer is not { } c || _busy) return;
+        if (c.Data.Stack.Length > 0)
+        {
+            await UpdateStack(c.Data.Stack);
+            return;
+        }
+        if (await ReadChange(c, update: true) is not { } change) return;
+        if (DockerUpdates.Parse(change.After.Image) == null)
+        {
+            Ui.Error($"{c.Name} is fixed to one exact build of its image, so there's nothing newer to get. Use Edit to choose another version.", "Docker");
+            return;
+        }
+        if (new DockerUpdateDialog(change) { Owner = Window.GetWindow(this) }.ShowDialog() != true) return;
+        var cancel = Begin($"Update {c.Name}");
+        await End(await change.RunAsync(ShowLine, cancel));
+    }
+
+    /// <summary>Reads everything needed to replace a container, including what would be lost. Null if it can't be replaced.</summary>
+    async Task<RecreatePlan?> ReadChange(ContainerRow c, bool update)
+    {
+        _busy = true;
+        UpdateButtons();
+        try
+        {
+            var others = _containers.Where(o => o.Id != c.Id).ToList();
+            var details = (await DockerCli.InspectAsync(new[] { c.Id }, withSize: true)).FirstOrDefault();
+            if (details == null)
+            {
+                Ui.Error($"Docker can't find {c.Name} any more.", "Docker");
+                return null;
+            }
+            if (details.InSwarm)
+            {
+                Ui.Error($"Docker Swarm runs {c.Name}, and would undo any change made here.", "Docker");
+                return null;
+            }
+            var image = (await DockerCli.InspectImagesAsync(new[] { details.ImageId })).FirstOrDefault();
+            var logDriver = await DockerCli.DefaultLogDriverAsync();
+            var changed = await DockerCli.ChangedFilesAsync(c.Id);
+            var relying = await DockerCli.InspectAsync(others.Select(o => o.Id));
+            var notCarried = new List<string>();
+            return new RecreatePlan
+            {
+                Container = details,
+                Before = details.ToPlan(image, logDriver, notCarried),
+                After = details.ToPlan(image, logDriver, new List<string>()),
+                NotCarried = notCarried,
+                ChangedFiles = changed,
+                Dependents = relying.Where(o => o.DependsOn(details)).Select(o => o.Name).ToList(),
+                TakenNames = others.Select(o => o.Name).ToList(),
+                BusyTcp = DockerTemplates.BusyPorts("tcp"),
+                BusyUdp = DockerTemplates.BusyPorts("udp"),
+                IsUpdate = update,
+                StartAfter = details.Running,
+            };
+        }
+        finally
+        {
+            _busy = false;
+            UpdateButtons();
+        }
+    }
+
+    async void CheckUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy) return;
+        var cancel = Begin("Check for newer images");
+        JobResult result;
+        try
+        {
+            result = await CheckForUpdates(cancel);
+        }
+        catch (OperationCanceledException)
+        {
+            result = new JobResult(JobLevel.Warn, "Stopped before it finished.");
+        }
+        await End(result);
+    }
+
+    async Task<JobResult> CheckForUpdates(CancellationToken cancel)
+    {
+        var details = await DockerCli.InspectAsync(_containers.Select(c => c.Id).ToList());
+        var images = await DockerCli.InspectImagesAsync(details.Select(d => d.ImageId));
+        var digests = images.ToDictionary(i => i.Id, i => i.RepoDigests);
+
+        using var gate = new SemaphoreSlim(4);
+        async Task<(List<string> Ids, ImageUpdate Result)> Check(IGrouping<(string Image, string ImageId), DockerDetails> group)
+        {
+            await gate.WaitAsync(cancel);
+            try
+            {
+                var found = await DockerUpdates.CheckAsync(group.Key.Image, digests.GetValueOrDefault(group.Key.ImageId, new()), cancel);
+                ShowLine($"{group.Key.Image}: {DockerUpdates.Describe(found)}");
+                return (group.Select(d => d.Id).ToList(), found);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
+        var results = await Task.WhenAll(details.GroupBy(d => (d.Image, d.ImageId)).Select(Check));
+        cancel.ThrowIfCancellationRequested();
+        foreach (var (ids, found) in results)
+        {
+            foreach (var id in ids) _updates[id] = found;
+        }
+        foreach (var row in _containers) row.UpdateText = _updates.TryGetValue(row.Id, out var u) ? DockerUpdates.Describe(u) : "";
+        // The columns stay out of the way until there's something to put in them.
+        ContainerUpdateColumn.Visibility = StackUpdateColumn.Visibility = Visibility.Visible;
+
+        int newer = results.Where(r => r.Result == ImageUpdate.Newer).Sum(r => r.Ids.Count);
+        int unknown = results.Where(r => r.Result == ImageUpdate.Unknown).Sum(r => r.Ids.Count);
+        var unchecked_ = unknown > 0 ? $" {unknown} couldn't be checked, which usually means a private image." : "";
+        return new JobResult(newer > 0 ? JobLevel.Warn : JobLevel.Good, newer > 0
+            ? $"{newer} {(newer == 1 ? "container has" : "containers have")} a newer image. Select one and choose Update.{unchecked_}"
+            : $"Nothing has a newer image.{unchecked_}");
+    }
 
     void ContainerShell_Click(object sender, RoutedEventArgs e)
     {
@@ -529,9 +715,95 @@ public partial class DockerPage : UserControl, IPage
 
     async void NetworkRemove_Click(object sender, RoutedEventArgs e)
     {
+        if (_showMap)
+        {
+            Map.DeleteSelected();
+            return;
+        }
         if (SelectedNetwork is not { } n) return;
         if (!Ui.Confirm($"Remove the network {n.Name}?\n\nDocker refuses if a container is connected to it.", "Docker")) return;
         await Run($"Remove {n.Name}", $"{n.Name} removed.", "network", "rm", n.Id);
+    }
+
+    // ---- The network map ----
+
+    async Task ShowMap()
+    {
+        _map = await DockerMapReader.ReadAsync();
+        _draft.Prune(_map);
+        Map.Show(_map, _draft);
+        ShowDraft();
+    }
+
+    /// <summary>Shows the commands the drawing adds up to. Nothing runs until Apply.</summary>
+    void ShowDraft()
+    {
+        bool any = !_draft.IsEmpty;
+        MapChanges.Visibility = any && _showMap ? Visibility.Visible : Visibility.Collapsed;
+        // A finished job's output takes room the drawing needs, above all in a small window.
+        if (any && !_busy) HideOutput();
+        if (any) MapPreview.Text = _draft.Preview();
+        var warnings = _draft.Warnings(_map);
+        MapWarnings.Text = string.Join("\n", warnings.Select(w => "•  " + w));
+        MapWarnings.Visibility = warnings.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    void NetworkView_Click(object sender, RoutedEventArgs e)
+    {
+        _showMap = !_showMap;
+        NetworkView.Content = _showMap ? "Show as list" : "Show as map";
+        MapFrame.Visibility = _showMap ? Visibility.Visible : Visibility.Collapsed;
+        Networks.Visibility = _showMap ? Visibility.Collapsed : Visibility.Visible;
+        NetworkTidy.Visibility = _showMap ? Visibility.Visible : Visibility.Collapsed;
+        ShowDraft();
+        UpdateButtons();
+    }
+
+    void NetworkTidy_Click(object sender, RoutedEventArgs e) => Map.Tidy();
+
+    void NetworkNew_Click(object sender, RoutedEventArgs e) => NewNetwork();
+
+    void NewNetwork()
+    {
+        var taken = _map.Networks.Select(n => n.Name).Concat(_draft.Created.Select(n => n.Name)).ToList();
+        var form = new DockerNetworkDialog(taken) { Owner = Window.GetWindow(this) };
+        if (form.ShowDialog() != true) return;
+        _draft.Create(form.Result);
+        if (!_showMap) NetworkView_Click(this, new RoutedEventArgs());
+        Map.Show(_map, _draft);
+        ShowDraft();
+    }
+
+    async void MapApply_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy || _draft.IsEmpty) return;
+        if (_draft.HasLosses && !Ui.Confirm($"Apply these network changes?\n\n{_draft.LossText()}", "Docker")) return;
+        var commands = _draft.Commands();
+        var cancel = Begin("Change networks");
+        int code = 0;
+        foreach (var command in commands)
+        {
+            ShowLine("> docker " + string.Join(" ", command.Select(DockerTemplates.Quote)));
+            code = await DockerCli.StreamAsync(command, ShowLine, cancel);
+            if (code != 0) break;
+        }
+        _draft.Clear();
+        await End(code == 0 ? new JobResult(JobLevel.Good, "The network changes are made.")
+            : code == Cmd.Cancelled ? new JobResult(JobLevel.Warn, "Stopped before it finished. The map shows where things stand.")
+            : new JobResult(JobLevel.Bad, "Docker refused one of the changes, so the rest weren't made. The map shows where things stand."));
+    }
+
+    void MapDiscard_Click(object sender, RoutedEventArgs e)
+    {
+        _draft.Clear();
+        Map.Show(_map, _draft);
+        ShowDraft();
+        MapHint.Text = MapHelp;
+    }
+
+    async void OpenFromMap(string name)
+    {
+        if (_containers.FirstOrDefault(c => c.Name == name) is { } row) await EditContainer(row);
     }
 
     // ---- Stacks ----
@@ -556,6 +828,53 @@ public partial class DockerPage : UserControl, IPage
         if (SelectedStack is not { } s) return;
         if (!Ui.Confirm($"Remove the stack {s.Name}?\n\nIts containers and networks go. Its volumes and Compose file stay.", "Docker")) return;
         await Run($"Remove {s.Name}", $"{s.Name} removed.", DockerCli.ComposeArgs(s.Name, "down"));
+    }
+
+    async void StackEdit_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedStack is { } s) await EditStack(s.Name);
+    }
+
+    async void StackUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedStack is { } s) await UpdateStack(s.Name);
+    }
+
+    /// <summary>Finds a stack's files, or says why they can't be used. Compose needs them for anything beyond start and stop.</summary>
+    async Task<DockerStackFiles?> FindStackFiles(string name)
+    {
+        var stack = (await DockerCli.StacksAsync()).Items.FirstOrDefault(s => s.Name == name);
+        var files = stack == null ? null : await DockerCli.StackFilesAsync(stack);
+        if (files == null) Ui.Error($"Tman can't reach {name}'s Compose file from Windows. It may have been started somewhere else, such as inside WSL, or the file may have moved.", "Docker");
+        return files;
+    }
+
+    async Task EditStack(string name)
+    {
+        if (_busy || await FindStackFiles(name) is not { } files) return;
+        StackPlan plan;
+        try
+        {
+            plan = StackPlan.From(files);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Ui.Error($"Couldn't read {name}'s Compose file.\n\n{ex.Message}", "Docker");
+            return;
+        }
+        var form = new DockerStackDialog(plan) { Owner = Window.GetWindow(this) };
+        form.TemplateSaved += ShowMine;
+        if (form.ShowDialog() != true) return;
+        var cancel = Begin($"Change {name}");
+        await End(await DockerStackChange.ApplyAsync(plan, ShowLine, cancel));
+    }
+
+    async Task UpdateStack(string name)
+    {
+        if (_busy || await FindStackFiles(name) is not { } files) return;
+        if (new DockerUpdateDialog(files) { Owner = Window.GetWindow(this) }.ShowDialog() != true) return;
+        var cancel = Begin($"Update {name}");
+        await End(await DockerStackChange.UpdateAsync(files, ShowLine, cancel));
     }
 
     void StackLogs_Click(object sender, RoutedEventArgs e)
@@ -607,11 +926,16 @@ public partial class DockerPage : UserControl, IPage
         }
     }
 
+    void ShowMine() => ShowApps(_listApps, _lists);
+
     void ShowApps(List<DockerApp> apps, TemplateLists lists)
     {
+        _listApps = apps;
+        _lists = lists;
         _templateCount = lists.Templates.Count;
         _listCount = lists.Loaded;
-        _cards = apps.Select(a => new AppCard(a)).ToList();
+        // Your own come first, and stay separate, or they'd be folded into the app they were made from.
+        _cards = DockerMyTemplates.Load().Select(DockerMyTemplates.ToApp).Concat(apps).Select(a => new AppCard(a)).ToList();
 
         _iconsByImage.Clear();
         foreach (var card in _cards)
@@ -639,6 +963,7 @@ public partial class DockerPage : UserControl, IPage
         if (CategoryFilter.SelectedItem is string category && !a.Categories.Contains(category, StringComparer.OrdinalIgnoreCase)) return false;
         if (KindFilter.SelectedIndex == 1 && !a.Versions.Any(v => v.Kind == DockerTemplateKind.Container)) return false;
         if (KindFilter.SelectedIndex == 2 && !a.Versions.Any(v => v.Kind is DockerTemplateKind.Compose or DockerTemplateKind.Edge)) return false;
+        if (KindFilter.SelectedIndex == 3 && !a.Versions.Any(v => v.IsMine)) return false;
         return _templateFilter.Length == 0 || Ui.Contains(a.Title, _templateFilter) || Ui.Contains(a.Description, _templateFilter)
             || a.Categories.Any(c => Ui.Contains(c, _templateFilter)) || a.Versions.Any(v => Ui.Contains(v.Image, _templateFilter));
     }
@@ -704,6 +1029,7 @@ public partial class DockerPage : UserControl, IPage
 
     void ShowTemplateDetails()
     {
+        TemplateRemove.Visibility = SelectedTemplate is { IsMine: true } ? Visibility.Visible : Visibility.Collapsed;
         if (_selected == null || SelectedTemplate is not { } t)
         {
             DetailTitle.Text = "Choose an app";
@@ -715,7 +1041,24 @@ public partial class DockerPage : UserControl, IPage
         DetailText.Text = t.CantDeploy(_status?.EngineOs) ?? (DockerUp ? description : $"Deploying needs Docker running. {description}");
     }
 
+    void TemplateRemove_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedTemplate is not { IsMine: true } t) return;
+        if (!Ui.Confirm($"Remove your template {t.Title}?\n\nOnly the template goes. Anything you deployed from it stays.", "Docker")) return;
+        try
+        {
+            DockerMyTemplates.Remove(t.Title);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Ui.Error($"Couldn't remove the template.\n\n{ex.Message}", "Docker");
+        }
+        ShowMine();
+    }
+
     async void Deploy_Click(object sender, RoutedEventArgs e) => await Deploy();
+
+    async Task<List<string>> NetworkNames() => (await DockerCli.NetworksAsync()).Items.Select(n => n.Name).ToList();
 
     async Task Deploy()
     {
@@ -727,7 +1070,9 @@ public partial class DockerPage : UserControl, IPage
     async Task DeployContainer(DockerTemplate t)
     {
         var plan = ContainerPlan.From(t, _containers.Select(c => c.Name).ToList(), DockerTemplates.BusyPorts("tcp"), DockerTemplates.BusyPorts("udp"));
-        if (new DockerDeployDialog(plan, t) { Owner = Window.GetWindow(this) }.ShowDialog() != true) return;
+        var form = new DockerDeployDialog(plan, t, await NetworkNames()) { Owner = Window.GetWindow(this) };
+        form.TemplateSaved += ShowMine;
+        if (form.ShowDialog() != true) return;
 
         var cancel = Begin($"Deploy {t.Title}");
         Output.Line(plan.Preview());
@@ -760,7 +1105,9 @@ public partial class DockerPage : UserControl, IPage
         ShowTemplateDetails();
 
         var plan = StackPlan.From(t, yaml, projects);
-        if (new DockerStackDialog(plan, t) { Owner = Window.GetWindow(this) }.ShowDialog() != true) return;
+        var form = new DockerStackDialog(plan, t) { Owner = Window.GetWindow(this) };
+        form.TemplateSaved += ShowMine;
+        if (form.ShowDialog() != true) return;
 
         var cancel = Begin($"Deploy {t.Title}");
         int code;

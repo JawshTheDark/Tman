@@ -7,29 +7,43 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition MinHeight="150" />
         </Grid.RowDefinitions>
-        <DockPanel>
-            <Button DockPanel.Dock="Right" Content="Open Windows Update settings" Click="OpenSettings_Click" />
-            <TextBlock Text="Windows Update" Style="{StaticResource PageTitle}" />
-        </DockPanel>
-        <c:AdminNote Grid.Row="1" Margin="0,10,0,0"
+        <TextBlock Text="Windows Update" Style="{StaticResource PageTitle}" />
+        <c:AdminNote Grid.Row="1"
                      Text="Switching the update mode needs administrator rights. History and searching for updates work without them." />
-        <UniformGrid Grid.Row="2" Rows="1" Margin="0,12,0,8">
-            <StackPanel Margin="0,0,10,0">
-                <TextBlock Text="LAST CHECK" Style="{StaticResource PanelLabel}" />
-                <TextBlock x:Name="LastCheckText" Text="…" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-            <StackPanel Margin="0,0,10,0">
-                <TextBlock Text="LAST INSTALL" Style="{StaticResource PanelLabel}" />
-                <TextBlock x:Name="LastInstallText" Text="…" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-            <StackPanel>
-                <TextBlock Text="UPDATE MODE" Style="{StaticResource PanelLabel}" />
-                <TextBlock x:Name="ModeShort" Text="…" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-        </UniformGrid>
-        <TabControl x:Name="Tabs" Grid.Row="3">
+        <Grid Grid.Row="3" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Last check" Style="{StaticResource StatLabel}" />
+                    <TextBlock x:Name="LastCheckText" Text="…" Style="{StaticResource StatValue}" Foreground="{StaticResource TitleBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Last install" Style="{StaticResource StatLabel}" />
+                    <TextBlock x:Name="LastInstallText" Text="…" Style="{StaticResource StatValue}" Foreground="{StaticResource TitleBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="4" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Update mode" Style="{StaticResource StatLabel}" />
+                    <TextBlock x:Name="ModeShort" Text="…" Style="{StaticResource StatValue}" Foreground="{StaticResource TitleBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                </StackPanel>
+            </Border>
+        </Grid>
+        <!-- The one button that belongs to every tab sits at the end of the tab strip. -->
+        <Button Grid.Row="4" Panel.ZIndex="1" Content="Open Windows Update settings" HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="0,10,0,0" Click="OpenSettings_Click" />
+        <TabControl x:Name="Tabs" Grid.Row="4" Margin="0,12,0,0">
             <TabItem Header="History">
                 <Grid Margin="0,10,0,0">
                     <Grid.RowDefinitions>
@@ -37,18 +51,12 @@
                         <RowDefinition MinHeight="60" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <Grid Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" MinWidth="130" MaxWidth="300" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <c:SearchBox x:Name="Search" Margin="0,0,14,0" Placeholder="Search updates" />
-                        <CheckBox x:Name="FailedOnly" Grid.Column="1" Content="Failures only" MinWidth="0" Margin="0,0,14,0" VerticalAlignment="Center" Click="FailedOnly_Click" />
-                        <Button Grid.Column="2" Content="Refresh" Margin="0,0,14,0" Click="Refresh_Click" />
-                        <TextBlock x:Name="HistoryCount" Grid.Column="3" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
-                    </Grid>
+                    <DockPanel Margin="0,0,0,10">
+                        <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+                        <c:SearchBox x:Name="Search" Width="300" Placeholder="Search updates" />
+                        <CheckBox x:Name="FailedOnly" Content="Failures only" MinWidth="0" Margin="14,0,0,0" VerticalAlignment="Center" Click="FailedOnly_Click" />
+                        <TextBlock x:Name="HistoryCount" Style="{StaticResource ToolbarCount}" />
+                    </DockPanel>
                     <DataGrid x:Name="History" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="History_SelectionChanged">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Update" Binding="{Binding Title}" Width="*" MinWidth="300" ElementStyle="{StaticResource CellText}" />
@@ -69,12 +77,11 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                     </DataGrid>
-                    <TextBlock x:Name="HistoryEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,40,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
-                    <Border x:Name="HistoryDetails" Grid.Row="2" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="14,10" Visibility="Collapsed">
+                    <TextBlock x:Name="HistoryEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
+                    <Border x:Name="HistoryDetails" Grid.Row="2" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
-                                <TextBlock x:Name="HistoryTitle" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock x:Name="HistoryTitle" Style="{StaticResource CardHeading}" TextWrapping="Wrap" />
                                 <TextBlock x:Name="HistoryError" Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{StaticResource BadBrush}" />
                                 <TextBlock x:Name="HistoryDesc" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextWrapping="Wrap" />
                             </StackPanel>
@@ -90,9 +97,9 @@
                         <RowDefinition MinHeight="60" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
-                        <Button x:Name="SearchButton" Content="Search for updates" Margin="0,0,14,8" Click="SearchUpdates_Click" />
-                        <TextBlock x:Name="SearchStatus" Margin="0,0,0,8" VerticalAlignment="Center" TextWrapping="Wrap" Style="{StaticResource Subtle}" />
+                    <WrapPanel Style="{StaticResource ActionRow}">
+                        <Button x:Name="SearchButton" Content="Search for updates" Margin="0,0,8,8" Click="SearchUpdates_Click" />
+                        <TextBlock x:Name="SearchStatus" Margin="4,0,0,8" VerticalAlignment="Center" TextWrapping="Wrap" Style="{StaticResource Subtle}" />
                     </WrapPanel>
                     <ProgressBar x:Name="SearchProgress" Grid.Row="1" Height="4" IsIndeterminate="True" Margin="0,0,0,8" Visibility="Collapsed" />
                     <DataGrid x:Name="Pending" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="Pending_SelectionChanged">
@@ -102,7 +109,7 @@
                             <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="80" MinWidth="80" ElementStyle="{StaticResource CellText}" />
                             <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="90" MinWidth="90" ElementStyle="{StaticResource CellText}" />
                             <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="80" MinWidth="80" ElementStyle="{StaticResource NumText}" />
-                            <DataGridTextColumn Header="Downloaded" Binding="{Binding DownloadedText}" Width="100" MinWidth="100" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Downloaded" Binding="{Binding DownloadedText}" Width="120" MinWidth="120" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                         <DataGrid.ContextMenu>
                             <ContextMenu>
@@ -110,10 +117,9 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                     </DataGrid>
-                    <TextBlock x:Name="PendingEmpty" Grid.Row="2" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,40,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top"
+                    <TextBlock x:Name="PendingEmpty" Grid.Row="2" Style="{StaticResource EmptyText}"
                                Text="Press Search for updates to ask Windows Update what's waiting. Nothing is downloaded or installed." />
-                    <Border x:Name="PendingDetails" Grid.Row="3" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="14,10" Visibility="Collapsed">
+                    <Border x:Name="PendingDetails" Grid.Row="3" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <TextBlock x:Name="PendingDesc" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
                         </ScrollViewer>
@@ -122,33 +128,37 @@
             </TabItem>
             <TabItem Header="Update mode">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
-                    <StackPanel Margin="0,0,8,0">
-                        <Border Style="{StaticResource Card}" Padding="14,10">
+                    <StackPanel Margin="0,0,12,0">
+                        <Border Style="{StaticResource Card}">
                             <StackPanel>
-                                <TextBlock Text="CURRENT MODE" Style="{StaticResource PanelLabel}" />
-                                <TextBlock x:Name="ModeTitle" Style="{StaticResource StatValue}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                <TextBlock Text="CURRENT MODE" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
+                                <TextBlock x:Name="ModeTitle" Style="{StaticResource StatValue}" TextWrapping="Wrap" />
                                 <TextBlock x:Name="ModeSummary" Margin="0,4,0,0" TextWrapping="Wrap" />
                                 <TextBlock x:Name="ModeNotes" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{StaticResource WarnBrush}" Visibility="Collapsed" />
                             </StackPanel>
                         </Border>
-                        <TextBlock Text="SWITCH MODE" Style="{StaticResource PanelLabel}" Margin="0,14,0,6" />
-                        <RadioButton x:Name="PickDefault" GroupName="UpdateMode" Content="Default" MinWidth="0" Click="Pick_Click" />
-                        <TextBlock Style="{StaticResource Subtle}" Margin="28,0,0,8" TextWrapping="Wrap"
-                                   Text="Windows decides. Removes every deferral and pause that these modes set." />
-                        <RadioButton x:Name="PickSecurity" GroupName="UpdateMode" Content="Security-focused" MinWidth="0" Click="Pick_Click" />
-                        <TextBlock Style="{StaticResource Subtle}" Margin="28,0,0,8" TextWrapping="Wrap"
-                                   Text="Feature updates wait 365 days, quality updates wait 4 days, and drivers are left out of updates. Uses Windows' documented update policies." />
-                        <RadioButton x:Name="PickPause" GroupName="UpdateMode" Content="Pause" MinWidth="0" Click="Pick_Click" />
-                        <TextBlock Style="{StaticResource Subtle}" Margin="28,0,0,6" TextWrapping="Wrap"
-                                   Text="Windows' own pause setting. No updates at all until the date you pick, then updates start again by themselves." />
-                        <ComboBox x:Name="PauseWeeks" Margin="28,0,0,10" MinWidth="130" HorizontalAlignment="Left" SelectedIndex="0" IsEnabled="False">
-                            <ComboBoxItem Content="1 week" />
-                            <ComboBoxItem Content="2 weeks" />
-                            <ComboBoxItem Content="3 weeks" />
-                            <ComboBoxItem Content="4 weeks" />
-                            <ComboBoxItem Content="5 weeks" />
-                        </ComboBox>
-                        <Button x:Name="SwitchButton" Content="Switch mode" HorizontalAlignment="Left" IsEnabled="False" Click="Switch_Click" />
+                        <Border Style="{StaticResource Card}" Margin="0,10,0,0">
+                            <StackPanel>
+                                <TextBlock Text="SWITCH MODE" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
+                                <RadioButton x:Name="PickDefault" GroupName="UpdateMode" Content="Default" MinWidth="0" Click="Pick_Click" />
+                                <TextBlock Style="{StaticResource Subtle}" Margin="28,0,0,8" TextWrapping="Wrap"
+                                           Text="Windows decides. Removes every deferral and pause that these modes set." />
+                                <RadioButton x:Name="PickSecurity" GroupName="UpdateMode" Content="Security-focused" MinWidth="0" Click="Pick_Click" />
+                                <TextBlock Style="{StaticResource Subtle}" Margin="28,0,0,8" TextWrapping="Wrap"
+                                           Text="Feature updates wait 365 days, quality updates wait 4 days, and drivers are left out of updates. Uses Windows' documented update policies." />
+                                <RadioButton x:Name="PickPause" GroupName="UpdateMode" Content="Pause" MinWidth="0" Click="Pick_Click" />
+                                <TextBlock Style="{StaticResource Subtle}" Margin="28,0,0,6" TextWrapping="Wrap"
+                                           Text="Windows' own pause setting. No updates at all until the date you pick, then updates start again by themselves." />
+                                <ComboBox x:Name="PauseWeeks" Margin="28,0,0,10" MinWidth="130" HorizontalAlignment="Left" SelectedIndex="0" IsEnabled="False">
+                                    <ComboBoxItem Content="1 week" />
+                                    <ComboBoxItem Content="2 weeks" />
+                                    <ComboBoxItem Content="3 weeks" />
+                                    <ComboBoxItem Content="4 weeks" />
+                                    <ComboBoxItem Content="5 weeks" />
+                                </ComboBox>
+                                <Button x:Name="SwitchButton" Content="Switch mode" HorizontalAlignment="Left" IsEnabled="False" Click="Switch_Click" />
+                            </StackPanel>
+                        </Border>
                         <TextBlock Style="{StaticResource Subtle}" Margin="0,10,0,0" TextWrapping="Wrap"
                                    Text="Tman has no option to turn updates off, on purpose. A PC that stops updating soon has known security holes." />
                     </StackPanel>

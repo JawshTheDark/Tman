@@ -12,21 +12,21 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <DockPanel>
-            <TextBlock DockPanel.Dock="Left" Text="Environment" Style="{StaticResource PageTitle}" />
-            <TextBlock x:Name="CountText" Margin="12,0,0,3" VerticalAlignment="Bottom" TextAlignment="Right" TextTrimming="CharacterEllipsis" Style="{StaticResource Subtle}" />
-        </DockPanel>
-        <c:AdminNote Grid.Row="1" Margin="0,10,0,0"
+        <TextBlock Text="Environment" Style="{StaticResource PageTitle}" />
+        <c:AdminNote Grid.Row="1"
                      Text="Changing system variables needs administrator rights. You can view them, and your own user variables work as normal." />
-        <c:SearchBox x:Name="Search" Grid.Row="2" MaxWidth="300" HorizontalAlignment="Left" Width="300" Margin="0,12,0,6" Placeholder="Search names and values" />
-        <WrapPanel Grid.Row="3" Margin="0,2,0,4">
-            <Button Content="Add" Margin="0,0,8,6" Click="Add_Click" />
-            <Button x:Name="EditButton" Content="Edit" Margin="0,0,8,6" IsEnabled="False" Click="Edit_Click" />
-            <Button x:Name="DeleteButton" Content="Delete" Margin="0,0,8,6" IsEnabled="False" Click="Delete_Click" />
-            <Button Content="User PATH" Margin="0,0,8,6" Click="UserPath_Click" />
-            <Button Content="System PATH" Margin="0,0,8,6" Click="SystemPath_Click" />
-            <Button Content="Backups" Margin="0,0,8,6" Click="Backups_Click" />
-            <Button Content="Refresh" Margin="0,0,8,6" Click="Refresh_Click" />
+        <DockPanel Grid.Row="2" Style="{StaticResource Toolbar}">
+            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+            <Button DockPanel.Dock="Right" Content="Backups" Margin="8,0,0,0" Click="Backups_Click" />
+            <c:SearchBox x:Name="Search" Width="300" Placeholder="Search names and values" />
+            <TextBlock x:Name="CountText" Style="{StaticResource ToolbarCount}" />
+        </DockPanel>
+        <WrapPanel Grid.Row="3" Style="{StaticResource ActionRow}">
+            <Button Content="Add" Margin="0,0,8,8" Click="Add_Click" />
+            <Button x:Name="EditButton" Content="Edit" Margin="0,0,8,8" IsEnabled="False" Click="Edit_Click" />
+            <Button x:Name="DeleteButton" Content="Delete" Margin="0,0,16,8" IsEnabled="False" Click="Delete_Click" />
+            <Button Content="User PATH" Margin="0,0,8,8" Click="UserPath_Click" />
+            <Button Content="System PATH" Margin="0,0,8,8" Click="SystemPath_Click" />
         </WrapPanel>
         <DataGrid x:Name="List" Grid.Row="4" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                   SelectionChanged="List_SelectionChanged" MouseDoubleClick="List_MouseDoubleClick">
@@ -46,12 +46,11 @@
                 </ContextMenu>
             </DataGrid.ContextMenu>
         </DataGrid>
-        <TextBlock x:Name="EmptyText" Grid.Row="4" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,40,30,0"
-                   HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
-        <Border x:Name="DetailsPane" Grid.Row="5" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="14,10" Visibility="Collapsed">
+        <TextBlock x:Name="EmptyText" Grid.Row="4" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
+        <Border x:Name="DetailsPane" Grid.Row="5" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <TextBlock x:Name="DetailTitle" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="DetailTitle" Style="{StaticResource CardHeading}" />
                     <TextBlock x:Name="DetailValue" Margin="0,4,0,0" TextWrapping="Wrap" />
                 </StackPanel>
             </ScrollViewer>

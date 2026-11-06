@@ -10,10 +10,10 @@
             <RowDefinition MinHeight="150" />
         </Grid.RowDefinitions>
         <TextBlock Text="Shared folders" Style="{StaticResource PageTitle}" />
-        <c:AdminNote Grid.Row="1" Margin="0,10,0,0"
+        <c:AdminNote Grid.Row="1"
                      Text="Seeing who's connected and which files are open, stopping a share and closing a session all need administrator rights. Your shares are listed either way." />
-        <DockPanel Grid.Row="2" Margin="0,12,0,8">
-            <Button DockPanel.Dock="Right" Content="Refresh" Margin="10,0,0,0" VerticalAlignment="Center" Click="Refresh_Click" />
+        <DockPanel Grid.Row="2" Style="{StaticResource Toolbar}">
+            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" VerticalAlignment="Center" Click="Refresh_Click" />
             <TextBlock x:Name="SharingText" VerticalAlignment="Center" TextWrapping="Wrap" />
         </DockPanel>
         <TabControl Grid.Row="3">
@@ -24,14 +24,14 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition MinHeight="60" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
+                    <WrapPanel Style="{StaticResource ActionRow}">
                         <Button x:Name="StopButton" Content="Stop sharing" Margin="0,0,8,8" IsEnabled="False" Click="Stop_Click" />
-                        <Button x:Name="OpenButton" Content="Open folder" Margin="0,0,14,8" IsEnabled="False" Click="Open_Click" />
-                        <TextBlock x:Name="ShareCount" Margin="0,0,0,8" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+                        <Button x:Name="OpenButton" Content="Open folder" Margin="0,0,8,8" IsEnabled="False" Click="Open_Click" />
+                        <TextBlock x:Name="ShareCount" Style="{StaticResource ToolbarCount}" Margin="4,0,0,8" />
                     </WrapPanel>
-                    <Border x:Name="NoShares" Grid.Row="1" Style="{StaticResource Card}" Padding="14,10" Margin="0,0,0,10" Visibility="Collapsed">
+                    <Border x:Name="NoShares" Grid.Row="1" Style="{StaticResource SlimCard}" Margin="0,0,0,10" Visibility="Collapsed">
                         <StackPanel>
-                            <TextBlock Text="No folders are shared" FontWeight="SemiBold" />
+                            <TextBlock Text="No folders are shared" Style="{StaticResource CardHeading}" />
                             <TextBlock x:Name="NoSharesText" Style="{StaticResource Subtle}" Margin="0,3,0,0" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
@@ -43,8 +43,7 @@
                             <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="200" MinWidth="200" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="SharesEmpty" Grid.Row="2" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+                    <TextBlock x:Name="SharesEmpty" Grid.Row="2" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                 </Grid>
             </TabItem>
             <TabItem Header="Sessions">
@@ -53,9 +52,9 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition MinHeight="60" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
-                        <Button x:Name="CloseButton" Content="Close session" Margin="0,0,14,8" IsEnabled="False" Click="CloseSession_Click" />
-                        <TextBlock x:Name="SessionCount" Margin="0,0,0,8" VerticalAlignment="Center" Style="{StaticResource Subtle}" />
+                    <WrapPanel Style="{StaticResource ActionRow}">
+                        <Button x:Name="CloseButton" Content="Close session" Margin="0,0,8,8" IsEnabled="False" Click="CloseSession_Click" />
+                        <TextBlock x:Name="SessionCount" Style="{StaticResource ToolbarCount}" Margin="4,0,0,8" />
                     </WrapPanel>
                     <DataGrid x:Name="Sessions" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="Sessions_SelectionChanged">
                         <DataGrid.Columns>
@@ -67,8 +66,7 @@
                             <DataGridTextColumn Header="Guest" Binding="{Binding GuestText}" Width="70" MinWidth="70" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="SessionsEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+                    <TextBlock x:Name="SessionsEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                 </Grid>
             </TabItem>
             <TabItem Header="Open files">
@@ -77,7 +75,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition MinHeight="60" />
                     </Grid.RowDefinitions>
-                    <TextBlock x:Name="FileCount" Margin="0,0,0,8" Style="{StaticResource Subtle}" />
+                    <TextBlock x:Name="FileCount" Style="{StaticResource ToolbarCount}" Margin="0,0,0,10" />
                     <DataGrid x:Name="Files" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="File" Binding="{Binding Path}" Width="*" MinWidth="240" ElementStyle="{StaticResource CellText}" />
@@ -86,8 +84,7 @@
                             <DataGridTextColumn Header="Locks" Binding="{Binding Locks}" Width="70" MinWidth="70" ElementStyle="{StaticResource NumText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="FilesEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+                    <TextBlock x:Name="FilesEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
                 </Grid>
             </TabItem>
         </TabControl>

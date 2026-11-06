@@ -38,6 +38,11 @@ public sealed class DockerTemplate
     public string Hostname { get; init; } = "";
     public bool Interactive { get; init; }
     public string? StackUrl { get; init; }
+    /// <summary>The Compose file itself, for one of your own templates.</summary>
+    public string? ComposeText { get; init; }
+    /// <summary>Other <c>docker run</c> options, one per line. Only your own templates can have these, because the form's warnings don't look inside them.</summary>
+    public string Options { get; init; } = "";
+    public bool IsMine { get; init; }
     public string Maintainer { get; init; } = "";
     public string Logo { get; init; } = "";
 
@@ -63,7 +68,7 @@ public sealed class DockerTemplate
     public string? CantDeploy(string? engineOs)
     {
         if (Kind == DockerTemplateKind.Swarm) return "This one needs Docker Swarm, which Tman doesn't set up.";
-        if (Kind != DockerTemplateKind.Container && StackUrl == null) return "The template doesn't say where its Compose file is.";
+        if (Kind != DockerTemplateKind.Container && StackUrl == null && ComposeText == null) return "The template doesn't say where its Compose file is.";
         if (engineOs != null && Platform.Length > 0 && !Platform.Equals(engineOs, StringComparison.OrdinalIgnoreCase))
             return $"This one is for {Platform} containers, and Docker is running {engineOs} containers.";
         return null;
@@ -186,8 +191,11 @@ public static class DockerTemplates
         return templates;
     }
 
-    public static Task<string> FetchStackAsync(DockerTemplate template) =>
-        template.StackUrl == null ? throw new InvalidOperationException("The template doesn't say where its Compose file is.") : FetchAsync(template.StackUrl, StackLimit);
+    public static Task<string> FetchStackAsync(DockerTemplate template)
+    {
+        if (template.ComposeText != null) return Task.FromResult(template.ComposeText);
+        return template.StackUrl == null ? throw new InvalidOperationException("The template doesn't say where its Compose file is.") : FetchAsync(template.StackUrl, StackLimit);
+    }
 
     static async Task<string> FetchAsync(string url, long limit)
     {
@@ -217,7 +225,8 @@ public static class DockerTemplates
     }
 
     /// <summary>Reads a list, skipping entries it can't make sense of. Throws only if the file as a whole isn't one.</summary>
-    public static List<DockerTemplate> Parse(string json, string source = "")
+    /// <param name="mine">The file is your own, so it can hold what a list from the internet isn't trusted with.</param>
+    public static List<DockerTemplate> Parse(string json, string source = "", bool mine = false)
     {
         using var doc = JsonDocument.Parse(json, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
         var root = doc.RootElement;
@@ -226,14 +235,14 @@ public static class DockerTemplates
         var templates = new List<DockerTemplate>();
         foreach (var e in list.EnumerateArray())
         {
-            if (e.ValueKind != JsonValueKind.Object || ReadTemplate(e) is not { } template) continue;
+            if (e.ValueKind != JsonValueKind.Object || ReadTemplate(e, mine) is not { } template) continue;
             template.SourceList = source;
             templates.Add(template);
         }
         return templates;
     }
 
-    static DockerTemplate? ReadTemplate(JsonElement e)
+    static DockerTemplate? ReadTemplate(JsonElement e, bool mine)
     {
         if (!e.TryGetProperty("type", out var type) || !type.TryGetInt32(out var kind) || kind is < 1 or > 4) return null;
         var title = Text(e, "title").Trim();
@@ -265,6 +274,9 @@ public static class DockerTemplates
             Hostname = Text(e, "hostname"),
             Interactive = Flag(e, "interactive"),
             StackUrl = FindStack(e),
+            ComposeText = mine && Text(e, DockerMyTemplates.ComposeKey) is { Length: > 0 } compose ? compose : null,
+            Options = mine ? Text(e, DockerMyTemplates.OptionsKey) : "",
+            IsMine = mine,
             Maintainer = Text(e, "maintainer").Trim(),
         };
     }
@@ -421,7 +433,7 @@ public static class DockerTemplates
     /// apps with a dead logo or none, tried under the app's name and then its image's name. Logos from templates named after
     /// the app come first, then the most common, because apps built on a shared image bring along their own branding.
     /// </summary>
-    static List<string> IconAddresses(string title, List<DockerTemplate> members)
+    internal static List<string> IconAddresses(string title, List<DockerTemplate> members)
     {
         var name = TitleKey(title);
         var addresses = members.Where(m => m.Logo.Length > 0).GroupBy(m => ToPng(m.Logo))
@@ -531,27 +543,64 @@ public static class DockerTemplates
 public sealed class PlanPort
 {
     public string Host { get; set; } = "";
-    public string Target { get; init; } = "";
-    public string Protocol { get; init; } = "tcp";
+    public string Target { get; set; } = "";
+    public string Protocol { get; set; } = "tcp";
+    /// <summary>The address a running container's port answers on, when "this PC or the network" can't describe it.</summary>
+    public string Address { get; init; } = "";
+
+    public bool IsBlank => Host.Trim().Length == 0 && Target.Trim().Length == 0;
 }
 
 public sealed class PlanVolume
 {
     public string Source { get; set; } = "";
-    public string Target { get; init; } = "";
+    public string Target { get; set; } = "";
     public bool ReadOnly { get; set; }
+    /// <summary>Docker's other mount options, such as "z", as they were written.</summary>
+    public string Options { get; init; } = "";
     /// <summary>The template pointed this at a path Windows doesn't have, so Tman chose a Docker volume instead.</summary>
     public string? OriginalBind { get; init; }
+
+    public bool IsBlank => Source.Trim().Length == 0 && Target.Trim().Length == 0;
+
+    /// <summary>A volume nobody named, which Docker calls by a long random name.</summary>
+    public bool Unnamed => Regex.IsMatch(Source.Trim(), "^[0-9a-f]{64}$");
+
+    /// <summary>A folder rather than a Docker volume.</summary>
+    public bool IsFolder => Source.Contains('/') || Source.Contains('\\');
 }
 
 public sealed class PlanEnv
 {
-    public string Name { get; init; } = "";
+    public string Name { get; set; } = "";
     public string Label { get; init; } = "";
     public string Description { get; init; } = "";
     public string Value { get; set; } = "";
     public bool Preset { get; init; }
     public List<TemplateChoice> Choices { get; init; } = new();
+    /// <summary>The name can be edited, because no template fixed it.</summary>
+    public bool Typed { get; init; }
+    /// <summary>Passed even when empty, because the container has it set that way.</summary>
+    public bool KeepEmpty { get; init; }
+}
+
+/// <summary>A network a container joins after it's made, because <c>docker create</c> only takes one with all its options.</summary>
+public sealed record NetworkJoin(string Network, List<string> Aliases, string Ip, string Ip6, long Priority)
+{
+    public string[] ConnectArgs(string container)
+    {
+        var args = new List<string> { "network", "connect" };
+        foreach (var alias in Aliases) args.AddRange(new[] { "--alias", alias });
+        if (Ip.Length > 0) args.AddRange(new[] { "--ip", Ip });
+        if (Ip6.Length > 0) args.AddRange(new[] { "--ip6", Ip6 });
+        if (Priority != 0) args.AddRange(new[] { "--gw-priority", Priority.ToString() });
+        args.Add(Network);
+        args.Add(container);
+        return args.ToArray();
+    }
+
+    /// <summary>Records compare their lists by reference, and two plans of one container must compare equal.</summary>
+    public string Text => string.Join(' ', ConnectArgs(""));
 }
 
 /// <summary>A single container, as the deploy form edits it.</summary>
@@ -564,16 +613,28 @@ public sealed class ContainerPlan
     public string Name { get; set; } = "";
     public string Image { get; set; } = "";
     public string Restart { get; set; } = RestartNever;
-    public bool HostNetwork { get; set; }
+    /// <summary>Empty for Docker's default network. Otherwise "host", "none", "container:…" or a network's name.</summary>
+    public string Network { get; set; } = "";
     public bool Privileged { get; set; }
     public bool OpenToNetwork { get; set; }
     public bool Tty { get; init; }
-    public string Hostname { get; init; } = "";
+    public string Hostname { get; set; } = "";
     public string Command { get; set; } = "";
+    /// <summary>Templates write commands with $VARIABLES in them. A running container's command is already final.</summary>
+    public bool FillCommand { get; init; }
+    /// <summary>Any other <c>docker run</c> options, one per line.</summary>
+    public string Options { get; set; } = "";
     public List<PlanPort> Ports { get; init; } = new();
     public List<PlanVolume> Volumes { get; init; } = new();
     public List<PlanEnv> Env { get; init; } = new();
-    public List<KeyValuePair<string, string>> Labels { get; init; } = new();
+    public List<PlanEnv> Labels { get; init; } = new();
+    /// <summary>Networks beyond the first, which only a running container can already be on.</summary>
+    public List<NetworkJoin> AlsoOn { get; init; } = new();
+
+    public bool HostNetwork => Network == "host";
+
+    /// <summary>Networks where Docker refuses published ports or a hostname, or ignores them.</summary>
+    bool SharedNetwork => HostNetwork || Network.StartsWith("container:");
 
     /// <summary>Starts from a template, with settings chosen to work on Windows and to stay off the network until asked.</summary>
     public static ContainerPlan From(DockerTemplate t, IReadOnlyCollection<string> takenNames, HashSet<int> busyTcp, HashSet<int> busyUdp)
@@ -587,9 +648,10 @@ public sealed class ContainerPlan
         var used = new HashSet<string>();
         foreach (var v in t.Volumes)
         {
-            bool keep = v.Bind != null && KeepBind(v.Bind);
+            // Your own template's paths are ones you chose, so they stay.
+            bool keep = v.Bind != null && (t.IsMine || KeepBind(v.Bind));
             var source = keep ? v.Bind! : VolumeName(unique, v.Target, used);
-            volumes.Add(new PlanVolume { Source = source, Target = v.Target, ReadOnly = v.ReadOnly, OriginalBind = keep ? null : v.Bind });
+            volumes.Add(new PlanVolume { Source = source, Target = v.Target, ReadOnly = v.ReadOnly, OriginalBind = keep || t.IsMine ? null : v.Bind });
         }
 
         return new ContainerPlan
@@ -597,25 +659,27 @@ public sealed class ContainerPlan
             Title = t.Title,
             Name = unique,
             Image = t.Image,
-            Restart = RestartPolicies.Contains(t.Restart) ? t.Restart : RestartNever,
+            Restart = t.Restart.Length > 0 && (t.IsMine || RestartPolicies.Contains(t.Restart)) ? t.Restart : RestartNever,
             // Docker Desktop's host networking is opt-in, so published ports are the safer way in whenever a template lists any.
-            HostNetwork = t.Network == "host" && ports.Count == 0,
+            Network = t.IsMine ? t.Network : t.Network == "host" && ports.Count == 0 ? "host" : "",
             Privileged = t.Privileged,
             Tty = t.Interactive,
             Hostname = t.Hostname,
             Command = t.Command,
+            FillCommand = !t.IsMine,
+            Options = t.Options,
             Ports = ports,
             Volumes = volumes,
-            Env = t.Env.Select(ToPlan).ToList(),
-            Labels = t.Labels,
+            Env = t.Env.Select(e => ToPlan(e, t.IsMine)).ToList(),
+            Labels = t.Labels.Select(l => new PlanEnv { Name = l.Key, Value = l.Value, Typed = true }).ToList(),
         };
     }
 
     /// <summary>A form row for a template setting. Templates carry their author's time zone, so TZ starts as this PC's.</summary>
-    internal static PlanEnv ToPlan(TemplateEnv e) => new()
+    internal static PlanEnv ToPlan(TemplateEnv e, bool asSaved = false) => new()
     {
-        Name = e.Name, Label = e.Label, Description = e.Description, Preset = e.Preset, Choices = e.Choices,
-        Value = e.Name == "TZ" && e.Choices.Count == 0 && TimeZoneInfo.TryConvertWindowsIdToIanaId(TimeZoneInfo.Local.Id, out var zone) ? zone : e.Value,
+        Name = e.Name, Label = e.Label, Description = e.Description, Preset = e.Preset, Choices = e.Choices, Typed = asSaved,
+        Value = !asSaved && e.Name == "TZ" && e.Choices.Count == 0 && TimeZoneInfo.TryConvertWindowsIdToIanaId(TimeZoneInfo.Local.Id, out var zone) ? zone : e.Value,
     };
 
     static string HostPort(TemplatePort p, HashSet<int> busyTcp, HashSet<int> busyUdp)
@@ -645,7 +709,9 @@ public sealed class ContainerPlan
         return unique;
     }
 
-    static readonly Regex HostPortText = new(@"^\d{1,5}(-\d{1,5})?$", RegexOptions.Compiled);
+    static readonly Regex PortNumber = new(@"^\d{1,5}(-\d{1,5})?$", RegexOptions.Compiled);
+    static readonly Regex EnvName = new(@"^[A-Za-z_][A-Za-z0-9_.-]*$", RegexOptions.Compiled);
+    static readonly Regex MountPath = new(@"^(/|[A-Za-z]:[\\/])", RegexOptions.Compiled);
 
     /// <summary>What's wrong with the form, in the order it appears.</summary>
     public List<string> Problems()
@@ -653,17 +719,25 @@ public sealed class ContainerPlan
         var problems = new List<string>();
         if (!DockerCli.IsValidName(Name)) problems.Add("The name can use letters, numbers, dots, dashes and underscores, and must start with a letter or number.");
         if (!DockerCli.IsValidImage(Image)) problems.Add("The image name isn't valid.");
-        foreach (var p in Ports)
+        var ports = Ports.Where(p => !p.IsBlank).ToList();
+        foreach (var p in ports)
         {
-            if (p.Host.Trim().Length > 0 && !HostPortText.IsMatch(p.Host.Trim())) problems.Add($"Port {p.Target}: \"{p.Host}\" isn't a port number.");
+            if (!PortNumber.IsMatch(p.Target.Trim())) problems.Add($"\"{p.Target}\" isn't a port number inside the container.");
+            if (p.Host.Trim().Length > 0 && !PortNumber.IsMatch(p.Host.Trim())) problems.Add($"Port {p.Target}: \"{p.Host}\" isn't a port number.");
         }
-        var hostPorts = Ports.Where(p => p.Host.Trim().Length > 0).GroupBy(p => (p.Host.Trim(), p.Protocol)).Where(g => g.Count() > 1);
+        var hostPorts = ports.Where(p => p.Host.Trim().Length > 0).GroupBy(p => (p.Host.Trim(), p.Protocol)).Where(g => g.Count() > 1);
         foreach (var repeat in hostPorts) problems.Add($"Port {repeat.Key.Item1} is used twice.");
-        foreach (var v in Volumes)
+        foreach (var v in Volumes.Where(v => !v.IsBlank))
         {
             if (v.Source.Trim().Length == 0) problems.Add($"{v.Target} needs a volume name or a folder.");
             else if (v.Source.Trim().StartsWith('-')) problems.Add($"{v.Target}: \"{v.Source}\" isn't a valid volume name or folder.");
+            if (!MountPath.IsMatch(v.Target.Trim())) problems.Add($"\"{v.Target}\" isn't a path inside the container. It should start with a slash.");
         }
+        foreach (var pair in Env.Concat(Labels).Where(e => e.Typed && e.Name.Trim().Length == 0 && e.Value.Length > 0))
+            problems.Add($"\"{pair.Value}\" needs a name.");
+        foreach (var e in Env.Where(e => e.Typed && e.Name.Trim().Length > 0 && !EnvName.IsMatch(e.Name.Trim())))
+            problems.Add($"\"{e.Name}\" can't be a setting's name. Use letters, numbers and underscores.");
+        if (Words(Options).FirstOrDefault() is { } first && !first.StartsWith('-')) problems.Add("Other options start with a dash, such as --memory 512m.");
         return problems;
     }
 
@@ -676,40 +750,66 @@ public sealed class ContainerPlan
         if (Volumes.Any(v => v.Source == "/" || v.Source.StartsWith("/proc") || v.Source.StartsWith("/sys") || v.Source.StartsWith("/dev/")))
             warnings.Add("It can see Docker's virtual machine, not only its own files.");
         if (HostNetwork) warnings.Add("Host network: its ports may not be reachable from Windows unless Docker Desktop's host networking is turned on.");
-        if (OpenToNetwork && Ports.Any(p => p.Host.Trim().Length > 0)) warnings.Add("Other devices on your network can reach these ports, and many templates ship with no password or a default one.");
+        if (OpenToNetwork && !SharedNetwork && Ports.Any(p => p.Host.Trim().Length > 0)) warnings.Add("Other devices on your network can reach these ports, and many templates ship with no password or a default one.");
         return warnings;
     }
 
-    public IEnumerable<string> RunArgs()
+    public IEnumerable<string> RunArgs() => Args("run", Name.Trim(), Restart);
+
+    /// <summary>The same as <see cref="RunArgs"/>, without starting it.</summary>
+    public IEnumerable<string> CreateArgs() => Args("create", Name.Trim(), Restart);
+
+    /// <summary>Everything that only a new container can change. The name and restart policy aren't in it, because a live container can change those.</summary>
+    public string Fingerprint() => string.Join('\0', Args("create", "", RestartNever).Concat(AlsoOn.Select(n => n.Text)));
+
+    List<string> Args(string verb, string name, string restart)
     {
-        var args = new List<string> { "run", "--detach", "--name", Name.Trim() };
+        var args = new List<string> { verb };
+        if (verb == "run") args.Add("--detach");
+        args.AddRange(new[] { "--name", name });
         if (Tty) args.AddRange(new[] { "--interactive", "--tty" });
-        if (Restart != RestartNever) args.AddRange(new[] { "--restart", Restart });
-        if (HostNetwork) args.AddRange(new[] { "--network", "host" });
-        if (Hostname.Length > 0) args.AddRange(new[] { "--hostname", Hostname });
+        if (restart != RestartNever) args.AddRange(new[] { "--restart", restart });
+        if (Network.Length > 0) args.AddRange(new[] { "--network", Network });
+        if (Hostname.Length > 0 && !SharedNetwork) args.AddRange(new[] { "--hostname", Hostname });
         if (Privileged) args.Add("--privileged");
-        if (!HostNetwork)
+        if (!SharedNetwork)
         {
             foreach (var p in Ports.Where(p => p.Host.Trim().Length > 0))
-                args.AddRange(new[] { "--publish", $"{(OpenToNetwork ? "" : "127.0.0.1:")}{p.Host.Trim()}:{p.Target}/{p.Protocol}" });
+                args.AddRange(new[] { "--publish", $"{Bound(p)}{p.Host.Trim()}:{p.Target.Trim()}/{p.Protocol}" });
         }
-        foreach (var v in Volumes)
-            args.AddRange(new[] { "--volume", $"{v.Source.Trim()}:{v.Target}{(v.ReadOnly ? ":ro" : "")}" });
-        foreach (var e in Env.Where(e => e.Value.Length > 0))
-            args.AddRange(new[] { "--env", $"{e.Name}={e.Value}" });
-        foreach (var l in Labels)
-            args.AddRange(new[] { "--label", $"{l.Key}={l.Value}" });
-        args.AddRange(new[] { "--label", $"tman.template={Title}" });
+        foreach (var v in Volumes.Where(v => !v.IsBlank))
+        {
+            var options = string.Join(',', new[] { v.ReadOnly ? "ro" : "", v.Options }.Where(o => o.Length > 0));
+            args.AddRange(new[] { "--volume", $"{v.Source.Trim()}:{v.Target.Trim()}{(options.Length > 0 ? ":" + options : "")}" });
+        }
+        foreach (var e in Env.Where(e => e.Name.Trim().Length > 0 && (e.Value.Length > 0 || e.KeepEmpty)))
+            args.AddRange(new[] { "--env", $"{e.Name.Trim()}={e.Value}" });
+        foreach (var l in Labels.Where(l => l.Name.Trim().Length > 0))
+            args.AddRange(new[] { "--label", $"{l.Name.Trim()}={l.Value}" });
+        if (Title.Length > 0) args.AddRange(new[] { "--label", $"tman.template={Title}" });
+        args.AddRange(Words(Options));
         args.Add(Image.Trim());
         args.AddRange(CommandWords());
         return args;
     }
 
-    /// <summary>Templates write commands as one line. Docker takes them as words, and doesn't fill in $VARIABLES itself.</summary>
+    string Bound(PlanPort p)
+    {
+        if (p.Address.Length == 0) return OpenToNetwork ? "" : "127.0.0.1:";
+        return p.Address.Contains(':') ? $"[{p.Address}]:" : $"{p.Address}:";
+    }
+
+    /// <summary>Docker takes a command as words, and doesn't fill in $VARIABLES itself.</summary>
     public List<string> CommandWords()
     {
-        var line = Regex.Replace(Command, @"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?", m =>
-            Env.FirstOrDefault(e => e.Name == m.Groups[1].Value) is { Value.Length: > 0 } e ? e.Value : m.Value);
+        if (!FillCommand) return Words(Command);
+        return Words(Regex.Replace(Command, @"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?", m =>
+            Env.FirstOrDefault(e => e.Name == m.Groups[1].Value) is { Value.Length: > 0 } e ? e.Value : m.Value));
+    }
+
+    /// <summary>Splits a line into words the way a shell would, honouring quotes.</summary>
+    public static List<string> Words(string line)
+    {
         var words = new List<string>();
         var word = new StringBuilder();
         char quote = '\0';
@@ -741,16 +841,28 @@ public sealed class ContainerPlan
         return words;
     }
 
+    /// <summary>Writes one word so that <see cref="Words"/> reads it back exactly.</summary>
+    public static string QuoteWord(string word)
+    {
+        if (word.Length > 0 && !word.Any(c => char.IsWhiteSpace(c) || c is '"' or '\'')) return word;
+        if (!word.Contains('"')) return $"\"{word}\"";
+        return !word.Contains('\'') ? $"'{word}'" : "\"" + word.Replace("\"", "\"'\"'\"") + "\"";
+    }
+
     public string Preview() => "docker " + string.Join(" ", RunArgs().Select(DockerTemplates.Quote));
 }
 
-/// <summary>A Compose stack, as the deploy form edits it.</summary>
+/// <summary>A Compose stack, as the deploy form edits it. Either a new one from a template, or one that's already deployed.</summary>
 public sealed class StackPlan
 {
     public string Title { get; init; } = "";
     public string Project { get; set; } = "";
     public string Yaml { get; set; } = "";
     public List<PlanEnv> Env { get; init; } = new();
+    /// <summary>Where a deployed stack's files are. Null for a new stack.</summary>
+    public DockerStackFiles? Deployed { get; init; }
+    /// <summary>A deployed stack's .env file exactly as written, since it may not be one Tman wrote.</summary>
+    public string EnvText { get; set; } = "";
 
     public static StackPlan From(DockerTemplate t, string yaml, IReadOnlyCollection<string> takenProjects)
     {
@@ -762,12 +874,28 @@ public sealed class StackPlan
             Title = t.Title,
             Project = unique,
             Yaml = yaml.Replace("\r\n", "\n").Replace("\n", Environment.NewLine),
-            Env = t.Env.Select(ContainerPlan.ToPlan).ToList(),
+            Env = t.Env.Select(e => ContainerPlan.ToPlan(e, t.IsMine)).ToList(),
         };
     }
 
-    public string Folder => Path.Combine(DockerTemplates.DataFolder, "docker-stacks", Project);
-    public string ComposeFile => Path.Combine(Folder, "docker-compose.yml");
+    /// <summary>Reads a deployed stack's files. Throws if they can't be read.</summary>
+    public static StackPlan From(DockerStackFiles deployed)
+    {
+        var yaml = File.ReadAllText(deployed.Files[0]);
+        var env = File.Exists(deployed.EnvFile) ? File.ReadAllText(deployed.EnvFile) : "";
+        return new StackPlan
+        {
+            Title = deployed.Project,
+            Project = deployed.Project,
+            Deployed = deployed,
+            Yaml = yaml.Replace("\r\n", "\n").Replace("\n", Environment.NewLine),
+            EnvText = env.Replace("\r\n", "\n").Replace("\n", Environment.NewLine),
+        };
+    }
+
+    public string Folder => Deployed?.Folder ?? Path.Combine(DockerTemplates.DataFolder, "docker-stacks", Project);
+    public string ComposeFile => Deployed?.Files[0] ?? Path.Combine(Folder, "docker-compose.yml");
+    public string EnvFile => Deployed?.EnvFile ?? Path.Combine(Folder, ".env");
 
     public List<string> Problems()
     {
@@ -785,11 +913,22 @@ public sealed class StackPlan
     {
         Directory.CreateDirectory(Folder);
         File.WriteAllText(ComposeFile, Yaml);
+        if (Deployed != null)
+        {
+            if (EnvText.Length > 0 || File.Exists(EnvFile)) File.WriteAllText(EnvFile, EnvText);
+            return;
+        }
         var values = Env.Where(e => e.Value.Length > 0).Select(e => $"{e.Name}='{e.Value.Replace("\r", "").Replace("\n", " ")}'");
-        File.WriteAllLines(Path.Combine(Folder, ".env"), values);
+        File.WriteAllLines(EnvFile, values);
     }
 
-    public string[] UpArgs() => DockerCli.ComposeArgs(Project, "--project-directory", Folder, "--file", ComposeFile, "up", "--detach");
+    public string[] UpArgs() => Deployed != null
+        ? Deployed.Args("up", "--detach", "--remove-orphans")
+        : DockerCli.ComposeArgs(Project, "--project-directory", Folder, "--file", ComposeFile, "up", "--detach");
 
-    public string Preview() => "docker " + string.Join(" ", UpArgs().Select(DockerTemplates.Quote));
+    public string Preview()
+    {
+        var up = "docker " + string.Join(" ", UpArgs().Select(DockerTemplates.Quote));
+        return Deployed == null ? up : "docker " + string.Join(" ", Deployed.Args("config", "--quiet").Select(DockerTemplates.Quote)) + Environment.NewLine + up;
+    }
 }

@@ -45,7 +45,7 @@ public partial class IsoBuilderPage : UserControl, IPage
         Application.Current.Exit += (_, _) => _stop?.Cancel();
         App.Terminating += () => _stop?.Cancel();
         LoadWorkDrives();
-        LoadUsbDisks();
+        _ = LoadUsbDisksAsync();
         CheckLeftover();
         Refresh();
     }
@@ -83,7 +83,7 @@ public partial class IsoBuilderPage : UserControl, IPage
         WorkDrives.SelectedItem = drives.FirstOrDefault();
     }
 
-    async void LoadUsbDisks()
+    async Task LoadUsbDisksAsync()
     {
         RefreshUsbButton.IsEnabled = false;
         UsbStatus.Text = "Looking for USB drives…";
@@ -93,7 +93,7 @@ public partial class IsoBuilderPage : UserControl, IPage
         UsbDisks.SelectedItem = disks.FirstOrDefault(d => d.Id == previous) ?? disks.FirstOrDefault();
         UsbStatus.Text = disks.Count == 0
             ? "No USB drives found. Plug one in, then choose Refresh."
-            : "Only USB drives are listed. Writing erases the whole drive.";
+            : "Only USB drives are listed. Writing erases the whole drive. When a build finishes, Tman asks whether to write it here.";
         RefreshUsbButton.IsEnabled = !_running;
         Refresh();
     }
@@ -191,7 +191,7 @@ public partial class IsoBuilderPage : UserControl, IPage
         foreach (var pick in AllPicks) pick.Ticked = false;
     }
 
-    void RefreshUsb_Click(object sender, RoutedEventArgs e) => LoadUsbDisks();
+    void RefreshUsb_Click(object sender, RoutedEventArgs e) => _ = LoadUsbDisksAsync();
 
     string? Account => AnswerBox.IsChecked == true ? AccountBox.Text.Trim() : null;
 
@@ -205,7 +205,9 @@ public partial class IsoBuilderPage : UserControl, IPage
     {
         if (!IsInitialized || RemoveCount == null) return;
         var ticked = AllPicks.Count(p => p.Ticked);
-        RemoveCount.Text = $"{ticked} of {AllPicks.Count()} ticked";
+        RemoveCount.Text = ticked == 0
+            ? "Nothing is ticked, so nothing will be removed."
+            : $"{ticked} of {AllPicks.Count()} will be removed. Ticked items are crossed out, and anything unticked stays.";
         AccountRow.IsEnabled = AnswerBox.IsChecked == true && !_running;
         var plan = Plan();
         string? problem = null;
@@ -221,7 +223,7 @@ public partial class IsoBuilderPage : UserControl, IPage
             : !MainWindow.IsAdmin ? "Needs administrator rights."
             : _reading ? "Reading the ISO…"
             : _media == null ? "Choose an ISO to start."
-            : problem ?? "Takes 20 minutes to an hour or more. You can stop at any time.";
+            : problem ?? "Takes about 10 minutes to an hour. You can stop at any time.";
         BuildButton.IsEnabled = MainWindow.IsAdmin && !_running && !_reading && plan != null && problem == null;
         WriteButton.IsEnabled = MainWindow.IsAdmin && !_running && UsbDisks.SelectedItem is UsbDisk && File.Exists(UsbIsoBox.Text);
         BrowseIsoButton.IsEnabled = BrowseOutputButton.IsEnabled = BrowseUsbIsoButton.IsEnabled = RefreshUsbButton.IsEnabled = !_running;
@@ -256,8 +258,13 @@ public partial class IsoBuilderPage : UserControl, IPage
         if (_running || Plan() is not { } plan || _media is not { } media) return;
         var account = plan.LocalAccount == null ? "" : $"\n\nSetup will skip the Microsoft account step and create a local administrator called {plan.LocalAccount} with no password.";
         var tool = IsoBuilder.FindOscdimg() == null ? "Windows' built-in image writer" : "oscdimg";
-        if (!Ui.Confirm($"Build a trimmed ISO?\n\nEdition: {plan.Edition.Name}\nRemoving: {Count(plan.Remove.Count, "item")}\nSaving to: {plan.OutputIso}{account}\n\nIt uses up to {Fmt.Bytes(IsoBuilder.WorkBytes(media, plan.Edition))} on {plan.WorkDrive}: while it runs, makes the ISO with {tool}, and takes 20 minutes to an hour or more. You can stop at any time, and everything temporary is removed.")) return;
+        // Named one by one, because this is the last chance to see that the ticks mean what you think they mean.
+        var removing = plan.Remove.Count == 0
+            ? "Nothing is ticked, so nothing will be removed."
+            : $"Removing {plan.Remove.Count}: {string.Join(", ", plan.Remove.Select(r => r.Title))}.\nEverything else stays.";
+        if (!Ui.Confirm($"Build a trimmed ISO?\n\nEdition: {plan.Edition.Name}\nSaving to: {plan.OutputIso}\n\n{removing}{account}\n\nIt uses up to {Fmt.Bytes(IsoBuilder.WorkBytes(media, plan.Edition))} on {plan.WorkDrive}: while it runs, makes the ISO with {tool}, and takes about 10 minutes to an hour. You can stop at any time, and everything temporary is removed.")) return;
         var stop = new CancellationTokenSource();
+        var started = DateTime.UtcNow;
         StartJob($"Building {plan.Edition.Name}", stop);
         JobResult result;
         try
@@ -268,13 +275,22 @@ public partial class IsoBuilderPage : UserControl, IPage
         {
             result = new JobResult(JobLevel.Bad, $"The build failed: {ex.Message}");
         }
-        if (result.Level != JobLevel.Bad && File.Exists(plan.OutputIso)) UsbIsoBox.Text = plan.OutputIso;
+        // The time rules out an older ISO of the same name, which a stopped build leaves in place.
+        bool built = result.Level != JobLevel.Bad && File.Exists(plan.OutputIso) && File.GetLastWriteTimeUtc(plan.OutputIso) >= started;
+        if (built) UsbIsoBox.Text = plan.OutputIso;
         FinishJob(result);
         LoadWorkDrives();
         CheckLeftover();
+        if (!built) return;
+        // Asked here because the USB card is easy to miss. It's the same question the button asks, so nothing is erased without a yes.
+        await LoadUsbDisksAsync();
+        await WriteToUsbAsync("Your ISO is ready, and a USB drive is plugged in. Write the ISO to it now?\n\n");
     }
 
-    async void Write_Click(object sender, RoutedEventArgs e)
+    async void Write_Click(object sender, RoutedEventArgs e) => await WriteToUsbAsync("");
+
+    /// <param name="lead">Words to put ahead of the erase warning.</param>
+    async Task WriteToUsbAsync(string lead)
     {
         if (_running || UsbDisks.SelectedItem is not UsbDisk disk) return;
         var iso = UsbIsoBox.Text;
@@ -286,7 +302,7 @@ public partial class IsoBuilderPage : UserControl, IPage
         WriteButton.IsEnabled = false;
         var contents = await Task.Run(() => IsoBuilder.DescribeContents(disk));
         Refresh();
-        if (!Ui.Confirm($"Erase {disk.Title}?\n\nOn it now: {contents}\n\nEverything on this drive will be erased, including anything Windows doesn't show, and it can't be undone. It will then hold {Path.GetFileName(iso)}.\n\nCheck that this is the right drive before you continue.", "Tman - erase USB drive")) return;
+        if (!Ui.Confirm($"{lead}Erase {disk.Title}?\n\nOn it now: {contents}\n\nEverything on this drive will be erased, including anything Windows doesn't show, and it can't be undone. It will then hold {Path.GetFileName(iso)}.\n\nCheck that this is the right drive before you continue.", "Tman - erase USB drive")) return;
         var stop = new CancellationTokenSource();
         StartJob($"Writing to {disk.Title}", stop);
         JobResult result;
@@ -299,6 +315,6 @@ public partial class IsoBuilderPage : UserControl, IPage
             result = new JobResult(JobLevel.Bad, $"Writing the drive failed: {ex.Message}");
         }
         FinishJob(result);
-        LoadUsbDisks();
+        await LoadUsbDisksAsync();
     }
 }

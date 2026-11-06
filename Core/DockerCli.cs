@@ -7,7 +7,7 @@ public enum DockerState { NotInstalled, Stopped, Running }
 
 public sealed record DockerStatus(DockerState State, string? ClientVersion, string? EngineVersion, string? EngineOs, string? Problem);
 
-public sealed record DockerContainer(string Id, string Name, string Image, string State, string Status, string Ports)
+public sealed record DockerContainer(string Id, string Name, string Image, string State, string Status, string Ports, string Stack = "")
 {
     /// <summary>A web address for the first published TCP port, or null when nothing is published.</summary>
     public string? Url => DockerCli.UrlFor(Ports);
@@ -28,7 +28,23 @@ public sealed record DockerNetwork(string Id, string Name, string Driver, string
     public bool BuiltIn => Name is "bridge" or "host" or "none";
 }
 
-public sealed record DockerStack(string Name, string Status, string ConfigFiles);
+public sealed record DockerStack(string Name, string Status, string ConfigFiles)
+{
+    /// <summary>Says when one of its containers has a newer image. Filled in once you've checked.</summary>
+    public string Update { get; init; } = "";
+}
+
+/// <summary>Where a deployed stack's files live, and how to run Compose against them.</summary>
+public sealed record DockerStackFiles(string Project, string Folder, List<string> Files, string EnvFile)
+{
+    public string[] Args(params string[] command)
+    {
+        var args = new List<string> { "--project-directory", Folder };
+        foreach (var file in Files) args.AddRange(new[] { "--file", file });
+        if (File.Exists(EnvFile)) args.AddRange(new[] { "--env-file", EnvFile });
+        return DockerCli.ComposeArgs(Project, args.Concat(command).ToArray());
+    }
+}
 
 /// <summary>Rows from Docker, or the reason there aren't any.</summary>
 public sealed record DockerList<T>(List<T> Items, string? Error);
@@ -53,9 +69,25 @@ public static class DockerCli
         foreach (var folder in folders)
         {
             var candidate = Path.Combine(folder, "docker.exe");
-            if (File.Exists(candidate)) return _exe = candidate;
+            if (File.Exists(candidate))
+            {
+                RepairPath(folder);
+                return _exe = candidate;
+            }
         }
         return _exe = null;
+    }
+
+    /// <summary>
+    /// Docker's tools are written in Go, which reads a stray quote mark in PATH as the start of a quoted entry and loses every
+    /// folder after it. Docker then can't find its own credential helper, so every pull fails. Children of Tman get a PATH
+    /// without quotes, and with Docker's folder on it even if Tman started before Docker was installed.
+    /// </summary>
+    static void RepairPath(string folder)
+    {
+        var path = (Environment.GetEnvironmentVariable("PATH") ?? "").Replace("\"", "");
+        if (!path.Split(';').Contains(folder, StringComparer.OrdinalIgnoreCase)) path = $"{folder};{path}";
+        Environment.SetEnvironmentVariable("PATH", path);
     }
 
     static string ProgramFiles => Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
@@ -107,7 +139,54 @@ public static class DockerCli
     public static async Task<DockerList<DockerContainer>> ContainersAsync()
     {
         var r = await Run(20000, "ps", "--all", "--no-trunc", "--format", "{{json .}}").ConfigureAwait(false);
-        return Rows(r, e => new DockerContainer(Text(e, "ID"), Text(e, "Names"), Text(e, "Image"), Text(e, "State"), Text(e, "Status"), Text(e, "Ports")));
+        return Rows(r, e => new DockerContainer(Text(e, "ID"), Text(e, "Names"), Text(e, "Image"), Text(e, "State"), Text(e, "Status"), Text(e, "Ports"), LabelIn(Text(e, "Labels"), "com.docker.compose.project")));
+    }
+
+    /// <summary>One label from the comma-separated text <c>docker ps</c> gives.</summary>
+    static string LabelIn(string labels, string name) =>
+        labels.Split(',').Select(l => l.Split('=', 2)).FirstOrDefault(l => l.Length == 2 && l[0] == name)?[1] ?? "";
+
+    /// <summary>Full details of these containers. Ones that have gone are left out.</summary>
+    /// <param name="withSize">Also measure what's been written inside each one, which takes a moment.</param>
+    public static async Task<List<DockerDetails>> InspectAsync(IEnumerable<string> ids, bool withSize = false)
+    {
+        var names = ids.ToList();
+        if (names.Count == 0) return new();
+        var args = new List<string> { "container", "inspect" };
+        if (withSize) args.Add("--size");
+        args.AddRange(names);
+        var r = await Run(withSize ? 60000 : 30000, args.ToArray()).ConfigureAwait(false);
+        return JsonArray(r.Lines).Select(e => new DockerDetails(e)).ToList();
+    }
+
+    public static async Task<List<DockerImageDetails>> InspectImagesAsync(IEnumerable<string> ids)
+    {
+        var names = ids.Distinct().ToList();
+        if (names.Count == 0) return new();
+        var r = await Run(30000, new[] { "image", "inspect" }.Concat(names).ToArray()).ConfigureAwait(false);
+        return JsonArray(r.Lines).Select(e => new DockerImageDetails(e)).ToList();
+    }
+
+    /// <summary>Paths changed inside a container since it was made, or null if Docker wouldn't say.</summary>
+    public static async Task<List<string>?> ChangedFilesAsync(string id)
+    {
+        var r = await Run(60000, "diff", id).ConfigureAwait(false);
+        if (r.Code != 0) return null;
+        return r.Lines.Select(l => Regex.Match(l, "^[AC] (.+)$")).Where(m => m.Success).Select(m => m.Groups[1].Value).ToList();
+    }
+
+    /// <summary>The log driver containers get when nobody picks one. It isn't the same on every install.</summary>
+    public static async Task<string> DefaultLogDriverAsync()
+    {
+        var r = await Run(15000, "info", "--format", "{{.LoggingDriver}}").ConfigureAwait(false);
+        return r.Code == 0 ? r.Lines.FirstOrDefault()?.Trim() ?? "" : "";
+    }
+
+    /// <summary>Docker's ID for an image here, or null if there's no such image.</summary>
+    public static async Task<string?> ImageIdAsync(string image)
+    {
+        var r = await Run(15000, "image", "inspect", "--format", "{{.Id}}", image).ConfigureAwait(false);
+        return r.Code == 0 ? r.Lines.FirstOrDefault()?.Trim() : null;
     }
 
     /// <summary>Live figures for running containers, by full ID. Takes a second or two, because Docker samples them.</summary>
@@ -139,6 +218,15 @@ public static class DockerCli
         return Rows(r, e => new DockerNetwork(Text(e, "ID"), Text(e, "Name"), Text(e, "Driver"), Text(e, "Scope")));
     }
 
+    /// <summary>Docker's full description of every network.</summary>
+    public static async Task<List<JsonElement>> InspectNetworksAsync()
+    {
+        var names = (await NetworksAsync().ConfigureAwait(false)).Items.Select(n => n.Id).ToList();
+        if (names.Count == 0) return new();
+        var r = await Run(20000, new[] { "network", "inspect" }.Concat(names).ToArray()).ConfigureAwait(false);
+        return JsonArray(r.Lines);
+    }
+
     /// <summary>Compose prints one JSON array here, unlike the one-object-per-line commands.</summary>
     public static async Task<DockerList<DockerStack>> StacksAsync()
     {
@@ -163,6 +251,22 @@ public static class DockerCli
     public static string[] ComposeArgs(string project, params string[] command) =>
         new[] { "compose", "--ansi", "never", "--progress", "plain", "--project-name", project }.Concat(command).ToArray();
 
+    /// <summary>
+    /// Where a stack's files are. Its containers record the folder and files, which is better than the list Compose prints.
+    /// Null when the files can't be reached from Windows, such as a stack started inside WSL.
+    /// </summary>
+    public static async Task<DockerStackFiles?> StackFilesAsync(DockerStack stack)
+    {
+        var members = (await ContainersAsync().ConfigureAwait(false)).Items.Where(c => c.Stack == stack.Name).Select(c => c.Id).Take(1);
+        var details = (await InspectAsync(members).ConfigureAwait(false)).FirstOrDefault();
+        var files = details?.StackFiles is { Count: > 0 } recorded ? recorded
+            : stack.ConfigFiles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        if (files.Count == 0 || !files.All(File.Exists)) return null;
+        var folder = details is { StackFolder.Length: > 0 } ? details.StackFolder : Path.GetDirectoryName(files[0])!;
+        var env = details is { StackEnvFile.Length: > 0 } ? details.StackEnvFile : Path.Combine(folder, ".env");
+        return new DockerStackFiles(stack.Name, folder, files, env);
+    }
+
     static DockerList<T> Rows<T>(WingetCli.Result r, Func<JsonElement, T> read) =>
         r.Code != 0 ? new DockerList<T>(new List<T>(), Explain(r.Lines)) : new DockerList<T>(JsonLines(r.Lines).Select(read).ToList(), null);
 
@@ -181,6 +285,22 @@ public static class DockerCli
             catch (JsonException) { }
         }
         return rows;
+    }
+
+    /// <summary>The JSON array an inspect command prints over many lines. Errors about missing items can share the stream.</summary>
+    static List<JsonElement> JsonArray(List<string> lines)
+    {
+        int first = lines.FindIndex(l => l.StartsWith('[')), last = lines.FindLastIndex(l => l.StartsWith(']'));
+        if (first < 0 || last < first) return new();
+        try
+        {
+            using var doc = JsonDocument.Parse(string.Join('\n', lines.Skip(first).Take(last - first + 1)));
+            return doc.RootElement.EnumerateArray().Select(e => e.Clone()).ToList();
+        }
+        catch (JsonException)
+        {
+            return new();
+        }
     }
 
     static string Text(JsonElement e, string name) =>

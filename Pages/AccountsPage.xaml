@@ -9,17 +9,15 @@
             <RowDefinition Height="Auto" />
             <RowDefinition MinHeight="150" />
         </Grid.RowDefinitions>
-        <DockPanel>
-            <TextBlock DockPanel.Dock="Left" Text="Accounts" Style="{StaticResource PageTitle}" />
-            <TextBlock x:Name="CountText" Margin="12,0,0,3" VerticalAlignment="Bottom" TextAlignment="Right" TextTrimming="CharacterEllipsis" Style="{StaticResource Subtle}" />
-        </DockPanel>
-        <c:AdminNote Grid.Row="1" Margin="0,10,0,0"
+        <TextBlock Text="Accounts" Style="{StaticResource PageTitle}" />
+        <c:AdminNote Grid.Row="1"
                      Text="Enabling or disabling an account and changing who is an administrator need administrator rights. You can still see the accounts and groups below." />
-        <WrapPanel Grid.Row="2" Margin="0,12,0,4">
-            <Button Content="Open User Accounts" Margin="0,0,8,6" Click="OpenUserAccounts_Click" />
-            <Button Content="Open Local Users and Groups" Margin="0,0,8,6" Click="OpenLocalUsers_Click" />
-            <Button Content="Refresh" Margin="0,0,8,6" Click="Refresh_Click" />
-        </WrapPanel>
+        <DockPanel Grid.Row="2" Style="{StaticResource Toolbar}">
+            <Button DockPanel.Dock="Right" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
+            <Button DockPanel.Dock="Right" Content="Open Local Users and Groups" Margin="8,0,0,0" Click="OpenLocalUsers_Click" />
+            <Button DockPanel.Dock="Right" Content="Open User Accounts" Margin="8,0,0,0" Click="OpenUserAccounts_Click" />
+            <TextBlock x:Name="CountText" Style="{StaticResource ToolbarCount}" Margin="0" />
+        </DockPanel>
         <TabControl Grid.Row="3">
             <TabItem Header="Users">
                 <Grid Margin="0,10,0,0">
@@ -28,7 +26,7 @@
                         <RowDefinition MinHeight="60" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <WrapPanel>
+                    <WrapPanel Style="{StaticResource ActionRow}">
                         <Button x:Name="EnableButton" Content="Enable" Margin="0,0,8,8" IsEnabled="False" Click="Enable_Click" />
                         <Button x:Name="DisableButton" Content="Disable" Margin="0,0,8,8" IsEnabled="False" Click="Disable_Click" />
                         <Button x:Name="AddAdminButton" Content="Add to Administrators" Margin="0,0,8,8" IsEnabled="False" Click="AddAdmin_Click" />
@@ -47,16 +45,15 @@
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Admin" Binding="{Binding AdminText}" Width="70" MinWidth="70" ElementStyle="{StaticResource CellText}" />
                             <DataGridTextColumn Header="Last sign-in" Binding="{Binding LastSignInText}" SortMemberPath="LastSignIn" Width="130" MinWidth="130" ElementStyle="{StaticResource CellText}" />
-                            <DataGridTextColumn Header="Password required" Binding="{Binding PasswordText}" Width="130" MinWidth="130" ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="Password required" Binding="{Binding PasswordText}" Width="160" MinWidth="160" ElementStyle="{StaticResource CellText}" />
                             <DataGridTextColumn Header="Groups" Binding="{Binding GroupsText}" Width="200" MinWidth="200" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="UsersEmpty" Grid.Row="1" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
-                    <Border x:Name="UserDetails" Grid.Row="2" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="14,10" Visibility="Collapsed">
+                    <TextBlock x:Name="UsersEmpty" Grid.Row="1" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
+                    <Border x:Name="UserDetails" Grid.Row="2" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
-                                <TextBlock x:Name="UserTitle" FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="UserTitle" Style="{StaticResource CardHeading}" FontSize="15" />
                                 <TextBlock x:Name="UserGroups" Margin="0,4,0,0" TextWrapping="Wrap" />
                                 <TextBlock x:Name="UserNote" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextWrapping="Wrap" />
                             </StackPanel>
@@ -78,17 +75,15 @@
                             <DataGridTextColumn Header="Description" Binding="{Binding Comment}" Width="*" MinWidth="240" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="GroupsEmpty" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
-                    <TextBlock x:Name="MembersTitle" Grid.Row="1" Text="MEMBERS" Style="{StaticResource PanelLabel}" Margin="0,10,0,6" />
+                    <TextBlock x:Name="GroupsEmpty" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
+                    <TextBlock x:Name="MembersTitle" Grid.Row="1" Text="MEMBERS" Style="{StaticResource PanelLabel}" Margin="0,10,0,8" />
                     <DataGrid x:Name="Members" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Member" Binding="{Binding Name}" Width="*" MinWidth="240" ElementStyle="{StaticResource CellText}" />
                             <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="130" MinWidth="130" ElementStyle="{StaticResource CellText}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock x:Name="MembersEmpty" Grid.Row="2" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,50,30,0"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Text="Pick a group to see who's in it." />
+                    <TextBlock x:Name="MembersEmpty" Grid.Row="2" Style="{StaticResource EmptyText}" Text="Pick a group to see who's in it." />
                 </Grid>
             </TabItem>
         </TabControl>

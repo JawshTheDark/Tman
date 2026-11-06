@@ -56,6 +56,7 @@ public partial class MainWindow : Window
             new NavEntry("battery", "", "Battery", () => new BatteryPage()),
             new NavEntry("latency", "", "Latency", () => new LatencyPage()),
             new NavEntry("memory", "", "Memory map", () => new MemoryMapPage()),
+            new NavEntry("leaks", "", "Leak monitor", () => new LeakMonitorPage()),
             "ADMIN",
             new NavEntry("tweaks", "", "Tweaks", () => new TweaksPage()),
             new NavEntry("contextmenus", "", "Context menus", () => new ContextMenusPage()),
@@ -390,6 +391,7 @@ public partial class MainWindow : Window
             if (extra != null && _current is PerformancePage perf) { await Task.Delay(1500); perf.SelectDevice(extra); }
             if (extra != null && _current is LatencyPage latency) await latency.RunCaptureAsync(int.Parse(extra));
             if (extra != null && _current is DockerPage docker) docker.ShowTab(int.Parse(extra));
+            if (extra == "sample" && _current is LeakMonitorPage leaks) await leaks.ShowSample();
             if (extra != null && _current is IsoBuilderPage iso) await iso.LoadIsoAsync(extra);
             await Task.Delay(((NavEntry)item.Tag).Key is "drivers" or "disk" or "apps" or "services" or "startup" or "processes"
                 or "crashes" or "events" or "health" or "devices" or "tasks" or "updates" or "accounts" or "shares" or "docker" or "firewall" or "security" or "restore" or "getapps" or "features" ? 8000 : 2500);

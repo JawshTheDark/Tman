@@ -148,28 +148,28 @@ internal sealed unsafe class MemoryMapReader
             PagedPool = Bytes(_paged) ?? perf.KernelPaged * perf.PageSize,
             NonPagedPool = Bytes(_nonPaged) ?? perf.KernelNonpaged * perf.PageSize,
             FileCache = Bytes(_cache) ?? 0,
-            PoolTags = ReadPoolTags(),
+            PoolTags = ReadAllPoolTags(ref _tags)?.OrderByDescending(t => t.Total).Take(TopTags).ToList(),
             ListsMissing = missing,
         };
     }
 
     static ulong Pages(nuint pages) => (ulong)pages * (ulong)PageSize;
 
-    /// <summary>The biggest pool tags, or null when Windows won't say.</summary>
-    List<PoolTagUse>? ReadPoolTags()
+    /// <summary>Every pool tag, or null when Windows won't say. The buffer grows as needed and is kept for next time.</summary>
+    public static List<PoolTagUse>? ReadAllPoolTags(ref byte[] buffer)
     {
         int status = 0;
         for (int attempt = 0; attempt < 3; attempt++)
         {
             int needed;
-            fixed (byte* p = _tags) status = Native.NtQuerySystemInformation(SystemPoolTagInformation, p, _tags.Length, out needed);
+            fixed (byte* p = buffer) status = Native.NtQuerySystemInformation(SystemPoolTagInformation, p, buffer.Length, out needed);
             if (status != Native.STATUS_INFO_LENGTH_MISMATCH) break;
-            _tags = new byte[Math.Max(needed + 64 * 1024, _tags.Length * 2)];
+            buffer = new byte[Math.Max(needed + 64 * 1024, buffer.Length * 2)];
         }
         if (status != 0) return null;
 
         var all = new List<PoolTagUse>();
-        fixed (byte* p = _tags)
+        fixed (byte* p = buffer)
         {
             uint count = *(uint*)p;
             var entries = (PoolTagEntry*)(p + 8);
@@ -180,7 +180,7 @@ internal sealed unsafe class MemoryMapReader
                 all.Add(new PoolTagUse(TagText(e.Tag), e.PagedUsed, e.NonPagedUsed, blocks));
             }
         }
-        return all.OrderByDescending(t => t.Total).Take(TopTags).ToList();
+        return all;
     }
 
     static string TagText(uint tag)

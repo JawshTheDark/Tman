@@ -38,26 +38,25 @@
         </ItemsPanelTemplate>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,12,0">
         <StackPanel>
             <TextBlock Text="Battery" Style="{StaticResource PageTitle}" />
-            <TextBlock x:Name="Subtitle" Margin="0,2,0,12" Style="{StaticResource Subtle}" TextWrapping="Wrap" />
+            <TextBlock x:Name="Subtitle" Style="{StaticResource PageSubtitle}" />
 
-            <Border x:Name="NoBattery" Style="{StaticResource Card}" Visibility="Collapsed">
+            <Border x:Name="NoBattery" Style="{StaticResource SlimCard}" Margin="0,12,0,0" Visibility="Collapsed">
                 <StackPanel>
-                    <TextBlock Text="This PC has no battery" FontSize="18" FontWeight="Bold" />
-                    <TextBlock Margin="0,4,0,0" Style="{StaticResource Subtle}" TextWrapping="Wrap"
+                    <TextBlock Text="This PC has no battery" Style="{StaticResource CardHeading}" />
+                    <TextBlock Margin="0,2,0,0" Style="{StaticResource Subtle}" TextWrapping="Wrap"
                                Text="Windows doesn't see a battery, so there's nothing to show here. Most desktop PCs don't have one." />
                 </StackPanel>
             </Border>
 
-            <ItemsControl x:Name="Cards" Focusable="False">
+            <ItemsControl x:Name="Cards" Focusable="False" Style="{StaticResource PageBody}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
-                            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <c:NeonPanel Header="{Binding Title}" Accent="{StaticResource PowerBrush}" Margin="0,0,0,10">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,0,0,6" />
                                     <DockPanel>
                                         <TextBlock DockPanel.Dock="Right" Text="{Binding State}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Bottom" Margin="12,0,0,3" />
                                         <TextBlock Text="{Binding Charge}" FontSize="30" FontWeight="Bold" Foreground="{Binding ChargeBrush}" />
@@ -65,11 +64,11 @@
                                     <c:UsageBar Value="{Binding ChargeFraction}" Fill="{Binding ChargeBrush}" Margin="0,6,0,14" />
                                     <ItemsControl ItemsSource="{Binding Live}" ItemTemplate="{StaticResource StatTemplate}" ItemsPanel="{StaticResource StatPanel}" Focusable="False" />
                                 </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            </c:NeonPanel>
+                            <Border Style="{StaticResource Card}" Margin="0,0,0,10">
                                 <StackPanel>
-                                    <TextBlock Text="BATTERY HEALTH" Style="{StaticResource PanelLabel}" />
-                                    <TextBlock Text="{Binding Verdict}" Foreground="{Binding VerdictBrush}" FontSize="22" FontWeight="Bold" Margin="0,6,0,2" />
+                                    <TextBlock Text="BATTERY HEALTH" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
+                                    <TextBlock Text="{Binding Verdict}" Foreground="{Binding VerdictBrush}" FontSize="22" FontWeight="Bold" Margin="0,0,0,2" />
                                     <TextBlock Text="{Binding VerdictText}" TextWrapping="Wrap" />
                                     <c:UsageBar Value="{Binding HeldFraction}" Fill="{Binding VerdictBrush}" Margin="0,10,0,14" />
                                     <ItemsControl ItemsSource="{Binding Capacity}" ItemTemplate="{StaticResource StatTemplate}" ItemsPanel="{StaticResource StatPanel}" Focusable="False" />

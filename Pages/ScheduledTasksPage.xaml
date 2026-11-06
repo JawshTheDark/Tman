@@ -11,36 +11,39 @@
             <RowDefinition MinHeight="80" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <DockPanel>
-            <TextBlock DockPanel.Dock="Left" Text="Scheduled tasks" Style="{StaticResource PageTitle}" />
-            <TextBlock x:Name="CountText" Margin="12,0,0,3" VerticalAlignment="Bottom" TextAlignment="Right" TextTrimming="CharacterEllipsis" Style="{StaticResource Subtle}" />
-        </DockPanel>
-        <c:AdminNote Grid.Row="1" Margin="0,10,0,0"
+        <TextBlock Text="Scheduled tasks" Style="{StaticResource PageTitle}" />
+        <c:AdminNote Grid.Row="1"
                      Text="Some tasks that belong to Windows or other accounts stay hidden from a standard user. Running or changing them needs administrator rights. Your own tasks work as normal." />
-        <Grid Grid.Row="2" Margin="0,12,0,6">
+        <!-- A crowded row: the search box gives way first, down to 170, and then the count trims. -->
+        <Grid Grid.Row="2" Style="{StaticResource Toolbar}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="170" MaxWidth="300" />
+                <ColumnDefinition Width="3*" MinWidth="170" MaxWidth="300" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <c:SearchBox x:Name="Search" Margin="0,0,14,0" Placeholder="Search name, folder, author or action" />
-            <CheckBox x:Name="ShowMicrosoft" Grid.Column="1" Content="Show Microsoft's tasks" MinWidth="0" Margin="0,0,14,0" VerticalAlignment="Center" Click="Filter_Click" />
-            <CheckBox x:Name="FailedOnly" Grid.Column="2" Content="Failed last run" MinWidth="0" VerticalAlignment="Center" Click="Filter_Click" />
+            <c:SearchBox x:Name="Search" Placeholder="Search name, folder, author or action" />
+            <CheckBox x:Name="ShowMicrosoft" Grid.Column="1" Content="Show Microsoft's tasks" MinWidth="0" Margin="14,0,0,0" VerticalAlignment="Center" Click="Filter_Click" />
+            <CheckBox x:Name="FailedOnly" Grid.Column="2" Content="Failed last run" MinWidth="0" Margin="14,0,0,0" VerticalAlignment="Center" Click="Filter_Click" />
+            <Button Grid.Column="4" Content="Open Task Scheduler" Margin="8,0,0,0" Click="OpenScheduler_Click" />
+            <Button Grid.Column="5" Content="Refresh" Margin="8,0,0,0" Click="Refresh_Click" />
         </Grid>
-        <WrapPanel Grid.Row="3" Margin="0,2,0,4">
-            <Button x:Name="RunButton" Content="Run now" Margin="0,0,8,6" IsEnabled="False" Click="Run_Click" />
-            <Button x:Name="EndButton" Content="End" Margin="0,0,8,6" IsEnabled="False" Click="End_Click" />
-            <Button x:Name="EnableButton" Content="Enable" Margin="0,0,8,6" IsEnabled="False" Click="Enable_Click" />
-            <Button x:Name="DisableButton" Content="Disable" Margin="0,0,8,6" IsEnabled="False" Click="Disable_Click" />
-            <Button Content="Open Task Scheduler" Margin="0,0,8,6" Click="OpenScheduler_Click" />
-            <Button Content="Refresh" Margin="0,0,8,6" Click="Refresh_Click" />
+        <WrapPanel Grid.Row="3" Style="{StaticResource ActionRow}">
+            <Button x:Name="RunButton" Content="Run now" Margin="0,0,8,8" IsEnabled="False" Click="Run_Click" />
+            <Button x:Name="EndButton" Content="End" Margin="0,0,16,8" IsEnabled="False" Click="End_Click" />
+            <Button x:Name="EnableButton" Content="Enable" Margin="0,0,8,8" IsEnabled="False" Click="Enable_Click" />
+            <Button x:Name="DisableButton" Content="Disable" Margin="0,0,8,8" IsEnabled="False" Click="Disable_Click" />
+            <!-- The count is long here, so it sits with the row buttons, where there is room for all of it. -->
+            <TextBlock x:Name="CountText" Style="{StaticResource ToolbarCount}" Margin="8,0,0,8" />
         </WrapPanel>
         <DataGrid x:Name="List" Grid.Row="4" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                   SelectionChanged="List_SelectionChanged">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="210" ElementStyle="{StaticResource CellText}" />
-                <DataGridTextColumn Header="Folder" Binding="{Binding Folder}" Width="130" MinWidth="130" ElementStyle="{StaticResource CellText}" />
-                <DataGridTemplateColumn Header="State" SortMemberPath="State" Width="80" MinWidth="80">
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="170" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Folder" Binding="{Binding Folder}" Width="95" MinWidth="95" ElementStyle="{StaticResource CellText}" />
+                <DataGridTemplateColumn Header="State" SortMemberPath="State" Width="75" MinWidth="75">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding State}" Foreground="{Binding StateBrush}" Style="{StaticResource CellText}" />
@@ -48,7 +51,7 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTextColumn Header="Last run" Binding="{Binding LastRunText}" SortMemberPath="LastRun" Width="125" MinWidth="125" ElementStyle="{StaticResource CellText}" />
-                <DataGridTemplateColumn Header="Last result" SortMemberPath="ResultText" Width="240" MinWidth="240">
+                <DataGridTemplateColumn Header="Last result" SortMemberPath="ResultText" Width="190" MinWidth="190">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding ResultText}" ToolTip="{Binding ResultText}" Foreground="{Binding ResultBrush}" Style="{StaticResource CellText}" />
@@ -56,8 +59,8 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTextColumn Header="Next run" Binding="{Binding NextRunText}" SortMemberPath="NextRun" Width="125" MinWidth="125" ElementStyle="{StaticResource CellText}" />
-                <DataGridTextColumn Header="Author" Binding="{Binding Author}" Width="130" MinWidth="130" ElementStyle="{StaticResource CellText}" />
-                <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="240" MinWidth="240" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Author" Binding="{Binding Author}" Width="105" MinWidth="105" ElementStyle="{StaticResource CellText}" />
+                <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="90" MinWidth="90" ElementStyle="{StaticResource CellText}" />
             </DataGrid.Columns>
             <DataGrid.ContextMenu>
                 <ContextMenu>
@@ -72,12 +75,11 @@
                 </ContextMenu>
             </DataGrid.ContextMenu>
         </DataGrid>
-        <TextBlock x:Name="EmptyText" Grid.Row="4" Style="{StaticResource Subtle}" TextWrapping="Wrap" TextAlignment="Center" Margin="30,40,30,0"
-                   HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
-        <Border x:Name="DetailsPane" Grid.Row="5" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="14,10" Visibility="Collapsed">
+        <TextBlock x:Name="EmptyText" Grid.Row="4" Style="{StaticResource EmptyText}" Visibility="Collapsed" />
+        <Border x:Name="DetailsPane" Grid.Row="5" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <TextBlock x:Name="DetailTitle" FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="DetailTitle" Style="{StaticResource CardHeading}" FontSize="15" />
                     <TextBlock x:Name="DetailInfo" Style="{StaticResource Subtle}" Margin="0,4,0,0" TextWrapping="Wrap" />
                     <TextBlock Text="TRIGGERS" Style="{StaticResource PanelLabel}" Margin="0,8,0,2" />
                     <TextBlock x:Name="DetailTriggers" TextWrapping="Wrap" />

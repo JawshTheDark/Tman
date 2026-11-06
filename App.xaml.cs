@@ -41,6 +41,7 @@ public partial class App : Application
         // Recorders subscribe before any page so they've processed each sample by the time pages read them.
         AppUsage.Instance.Start();
         FlightRecorder.Instance.Start();
+        LeakRecorder.Instance.Start();
         SystemMonitor.Instance.Start(Dispatcher);
         StaticInfo.LoadAsync(Dispatcher);
         // A build that lost its power as well as its process leaves only the journal to go on.
@@ -67,6 +68,7 @@ public partial class App : Application
         if (Tman.MainWindow.SnapshotMode) return;
         Settings.Current.Save();
         AppUsage.Instance.Save();
+        LeakRecorder.Instance.Save();
     }
 
     static void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)

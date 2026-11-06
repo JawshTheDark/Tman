@@ -6,7 +6,18 @@
     <UserControl.Resources>
         <DataTemplate x:Key="PickTemplate">
             <CheckBox IsChecked="{Binding Ticked}" ToolTip="{Binding Item.Note}" Margin="0,0,8,0">
-                <TextBlock Text="{Binding Item.Title}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Item.Title}" TextTrimming="CharacterEllipsis">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Ticked}" Value="True">
+                                    <Setter Property="TextDecorations" Value="Strikethrough" />
+                                    <Setter Property="Foreground" Value="{StaticResource SubtleBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </CheckBox>
         </DataTemplate>
         <ItemsPanelTemplate x:Key="PickPanel">
@@ -24,10 +35,10 @@
             <RowDefinition x:Name="PanelRow" Height="Auto" MaxHeight="260" />
         </Grid.RowDefinitions>
         <TextBlock Text="ISO builder" Style="{StaticResource PageTitle}" />
-        <TextBlock Grid.Row="1" Margin="0,6,0,10" Style="{StaticResource Subtle}" TextWrapping="Wrap"
+        <TextBlock Grid.Row="1" Style="{StaticResource PageSubtitle}"
                    Text="Turns an official Windows 11 ISO into a smaller one with the apps you don't want taken out. Your original ISO isn't changed." />
         <c:AdminNote Grid.Row="2" Text="You can look inside an ISO, but building one and writing to USB need administrator rights, because Windows' image tools refuse to run without them." />
-        <Border x:Name="LeftoverBar" Grid.Row="3" Style="{StaticResource Card}" Padding="12,8" Margin="0,0,0,10" Visibility="Collapsed"
+        <Border x:Name="LeftoverBar" Grid.Row="3" Style="{StaticResource SlimCard}" Margin="0,10,0,0" Visibility="Collapsed"
                 BorderBrush="{StaticResource WarnBrush}">
             <DockPanel>
                 <Button x:Name="LeftoverButton" DockPanel.Dock="Right" Content="Clean up" Margin="12,0,0,0" Click="CleanUp_Click" />
@@ -35,9 +46,9 @@
             </DockPanel>
         </Border>
 
-        <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-            <StackPanel Margin="0,0,8,0">
-                <Border Style="{StaticResource Card}" Padding="14,12" Margin="0,0,0,10">
+        <ScrollViewer Grid.Row="4" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+            <StackPanel Margin="0,0,12,0">
+                <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Text="WINDOWS ISO" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
                         <DockPanel>
@@ -53,15 +64,16 @@
                     </StackPanel>
                 </Border>
 
-                <Border Style="{StaticResource Card}" Padding="14,12" Margin="0,0,0,10">
+                <Border Style="{StaticResource Card}" Margin="0,10,0,0">
                     <StackPanel>
                         <DockPanel Margin="0,0,0,8">
-                            <Button x:Name="ClearButton" DockPanel.Dock="Right" Content="Clear all" Margin="8,0,0,0" Click="Clear_Click" />
+                            <Button x:Name="ClearButton" DockPanel.Dock="Right" Content="Keep everything" Margin="8,0,0,0" Click="Clear_Click"
+                                    ToolTip="Unticks everything, so that nothing is removed." />
                             <Button x:Name="SuggestedButton" DockPanel.Dock="Right" Content="Suggested" Click="Suggested_Click"
                                     ToolTip="Ticks what most people can do without. Nothing that Windows itself depends on is ever offered." />
-                            <TextBlock x:Name="RemoveCount" DockPanel.Dock="Right" Style="{StaticResource Subtle}" VerticalAlignment="Center" Margin="0,0,12,0" />
-                            <TextBlock Text="REMOVE FROM THE IMAGE" Style="{StaticResource PanelLabel}" VerticalAlignment="Center" />
+                            <TextBlock Text="TICK WHAT TO REMOVE" Style="{StaticResource PanelLabel}" VerticalAlignment="Center" />
                         </DockPanel>
+                        <TextBlock x:Name="RemoveCount" Style="{StaticResource CardHeading}" TextWrapping="Wrap" Margin="0,0,0,8" />
                         <TextBlock Text="Store apps" Style="{StaticResource StatLabel}" Margin="0,0,0,4" />
                         <ItemsControl x:Name="AppList" Focusable="False" ItemTemplate="{StaticResource PickTemplate}" ItemsPanel="{StaticResource PickPanel}" />
                         <TextBlock Text="Extras" Style="{StaticResource StatLabel}" Margin="0,10,0,4" />
@@ -71,7 +83,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Style="{StaticResource Card}" Padding="14,12" Margin="0,0,0,10">
+                <Border Style="{StaticResource Card}" Margin="0,10,0,0">
                     <StackPanel>
                         <TextBlock Text="SETUP" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
                         <CheckBox x:Name="AnswerBox" Content="Skip the Microsoft account step" Checked="Option_Changed" Unchecked="Option_Changed" />
@@ -89,7 +101,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Style="{StaticResource Card}" Padding="14,12" Margin="0,0,0,10">
+                <Border Style="{StaticResource Card}" Margin="0,10,0,0">
                     <StackPanel>
                         <TextBlock Text="OUTPUT" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
                         <DockPanel>
@@ -106,7 +118,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Style="{StaticResource Card}" Padding="14,12">
+                <Border Style="{StaticResource Card}" Margin="0,10,0,0">
                     <StackPanel>
                         <TextBlock Text="USB DRIVE" Style="{StaticResource PanelLabel}" Margin="0,0,0,8" />
                         <DockPanel>
@@ -124,7 +136,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <DockPanel Grid.Row="5" Margin="0,10,8,0">
+        <DockPanel Grid.Row="5" Margin="0,10,12,0">
             <Button x:Name="BuildButton" DockPanel.Dock="Left" Content="Build ISO" MinWidth="96" IsEnabled="False" Click="Build_Click" />
             <TextBlock x:Name="BuildStatus" Style="{StaticResource Subtle}" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap" />
         </DockPanel>

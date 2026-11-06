@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 using Tman.Core;
 
 namespace Tman.Pages;
@@ -68,13 +69,15 @@ public partial class PanelsPage : UserControl, IPage
         InitializeComponent();
         foreach (var (group, tools) in Tools)
         {
-            var grid = new UniformGrid { Columns = 3, Margin = new Thickness(-4, 6, -4, -4) };
+            // Each tile carries 4 all round, which makes them 8 apart. The grid pulls the outer 4 back in.
+            var grid = new UniformGrid { Columns = 3, Margin = new Thickness(-4) };
             foreach (var tool in tools) grid.Children.Add(MakeButton(tool));
             _grids.Add(grid);
             var panel = new StackPanel();
-            panel.Children.Add(new TextBlock { Text = group, Style = (Style)FindResource("PanelLabel") });
+            panel.Children.Add(new TextBlock { Text = group, Style = (Style)FindResource("PanelLabel"), Margin = new Thickness(0, 0, 0, 8) });
             panel.Children.Add(grid);
-            Groups.Children.Add(new Border { Style = (Style)FindResource("Card"), Margin = new Thickness(0, 12, 0, 0), Padding = new Thickness(14, 12, 14, 14), Child = panel });
+            // 12 under the page's subtitle, then the cards are 10 apart.
+            Groups.Children.Add(new Border { Style = (Style)FindResource("Card"), Margin = new Thickness(0, _grids.Count == 1 ? 12 : 10, 0, 0), Child = panel });
         }
         Groups.SizeChanged += (_, e) =>
         {
@@ -85,7 +88,7 @@ public partial class PanelsPage : UserControl, IPage
 
     Button MakeButton(Tool tool)
     {
-        var name = new TextBlock { Text = tool.Name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+        var name = new TextBlock { Text = tool.Name, Style = (Style)FindResource("CardHeading"), TextWrapping = TextWrapping.Wrap };
         var what = new TextBlock { Text = tool.What, TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(0, 3, 0, 0), Style = (Style)FindResource("Subtle") };
         var label = new StackPanel();
         label.Children.Add(name);
@@ -94,7 +97,9 @@ public partial class PanelsPage : UserControl, IPage
         {
             Content = label,
             Margin = new Thickness(4),
-            Padding = new Thickness(12, 8, 12, 8),
+            Padding = new Thickness(14, 10, 14, 10),
+            Background = (Brush)FindResource("CardBrush"),
+            BorderBrush = (Brush)FindResource("CardStrokeBrush"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Left,

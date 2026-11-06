@@ -12,7 +12,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,12,12">
                 <StackPanel>
                     <TextBlock Text="Last wake" Style="{StaticResource CardTitle}" Margin="0,0,0,8" />
-                    <TextBlock x:Name="WakeSource" Text="Loading…" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="WakeSource" Text="Loading…" Style="{StaticResource CardHeading}" FontSize="16" TextWrapping="Wrap" />
                     <TextBlock x:Name="WakeWhen" Margin="0,2,0,0" TextWrapping="Wrap" Style="{StaticResource Subtle}" />
                 </StackPanel>
             </Border>

@@ -5,7 +5,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel x:Name="Groups" Margin="0,0,12,0">
             <TextBlock Text="Control panels" Style="{StaticResource PageTitle}" />
-            <TextBlock Style="{StaticResource Subtle}" TextWrapping="Wrap" Margin="0,6,0,0"
+            <TextBlock Style="{StaticResource PageSubtitle}"
                        Text="Classic Windows tools that are hard to find now. Some ask for administrator permission as they open. That prompt comes from Windows, not Tman." />
         </StackPanel>
     </ScrollViewer>
