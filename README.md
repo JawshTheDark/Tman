@@ -21,6 +21,15 @@ A lightweight task manager for Windows 11, built with C# / WPF on .NET 10 and th
 - **Disk space**: drive usage, plus a fast parallel folder-size analyzer you can drill into.
 - **Benchmarks**: about 30 seconds of CPU (single and multi-thread), memory (bandwidth and latency) and drive tests (sequential, random 4K at queue depths 32 and 1, unbuffered). Results are saved so you can compare runs. CPU scores are relative, with 1,000 about one Ryzen 9 7950X core. The drive test writes at most about 5 GB to a temp file that deletes itself.
 
+## Tray icons
+
+Tman puts live icons in the system tray, one per metric, redrawn every sample. Choose them in **View > Tray icons…**:
+
+- **Metrics**: CPU usage, memory, GPU usage, GPU temperature, disk activity, network download, network upload, CPU power and CPU clock. CPU, memory and GPU are on by default. The order in the list is the order in the tray.
+- **Style**: a number with a level strip, or an LED meter, each in the metric's color.
+- **Behavior**: hover for details, click to open Tman, right-click for a menu (Open, Tray icons…, Exit). By default, closing the window keeps Tman running in the tray. You can turn that off in the same dialog.
+- **Visibility**: Windows 11 puts new tray icons in the hidden-icons flyout (^). **Always show on the taskbar** pins them, or use Settings > Personalization > Taskbar > Other system tray icons.
+
 ## Build and run
 
 ```bash
@@ -42,7 +51,7 @@ Tman runs as a normal user. Ending system processes, managing services and chang
 - Per-processor clocks come from the `Actual Frequency` counter, throttling from `% Performance Limit`, and power from the `Energy Meter` counters. None of these need admin.
 - Static hardware info is loaded once, in the background, through WMI.
 
-Settings, app history and benchmark results live in `%APPDATA%\Tman\` (`settings.json`, `app-history.json`, `benchmarks.json`).
+Settings, app history and benchmark results live in `%APPDATA%\Tman\` (`settings.json`, `app-history.json`, `benchmarks.json`). Unexpected errors are written to `errors.log` in the same folder.
 
 ## Dev flags
 
@@ -52,5 +61,6 @@ Settings, app history and benchmark results live in `%APPDATA%\Tman\` (`settings
   - Flight recorder: the number of seconds to record first.
   - File locks: a path or name to search for.
   - Performance: a device key prefix to select, e.g. `gpu`.
+- `--snap <dir> tray` renders every tray icon in both styles at each tray size into `tray-sheet.png`, briefly registers live icons to check the shell accepts them, and renders the settings dialog.
 - `--snap <dir> details [pid]` renders each tab of the process Details window (Tman itself by default) and writes `details-checks.txt` with dump, affinity, signature and GPU sensor checks.
 - `--offscreen [page]` runs normally but out of view, for profiling.

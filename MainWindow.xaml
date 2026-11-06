@@ -31,6 +31,8 @@
                 <Separator />
                 <MenuItem x:Name="TopmostItem" Header="Always on _top" IsCheckable="True" Click="Topmost_Click" />
                 <MenuItem x:Name="CollapseItem" Header="_Compact sidebar" IsCheckable="True" Click="Collapse_Click" />
+                <Separator />
+                <MenuItem Header="T_ray icons…" Click="TraySettings_Click" />
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="_About Tman" Click="About_Click" />

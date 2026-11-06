@@ -7,6 +7,7 @@ using System.Windows.Input;
 using Tman.Core;
 using Tman.Monitoring;
 using Tman.Pages;
+using Tman.Tray;
 
 namespace Tman;
 
@@ -92,18 +93,84 @@ public partial class MainWindow : Window
             if (offscreen + 1 < args.Length)
                 Nav.SelectedItem = Nav.Items.OfType<ListBoxItem>().FirstOrDefault(i => (i.Tag as NavEntry)?.Key == args[offscreen + 1]) ?? Nav.SelectedItem;
         }
-        Closing += (_, _) =>
+        // Tray icons stay out of dev renders and profiling runs.
+        if (!SnapshotMode)
         {
-            if (SnapshotMode) return;
-            s.Maximized = WindowState == WindowState.Maximized;
-            if (WindowState == WindowState.Normal)
-            {
-                s.Width = Width;
-                s.Height = Height;
-            }
-            s.Save();
-        };
+            _tray = new TrayIcons(ShowFromTray, OpenTraySettings, ExitApp);
+            _tray.Sync(null);
+        }
+        Application.Current.SessionEnding += (_, _) => App.Exiting = true;
+        Closing += OnClosing;
+        Closed += (_, _) => _tray?.Dispose();
+        App.Terminating += () => _tray?.Dispose();
     }
+
+    // ---- Tray ----
+
+    TrayIcons? _tray;
+
+    void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (!SnapshotMode)
+        {
+            SaveWindowSettings();
+            var s = Settings.Current;
+            if (!App.Exiting && _tray is { Shown: > 0 } && s.TrayEnabled && s.KeepInTray)
+            {
+                e.Cancel = true;
+                HideToTray();
+                return;
+            }
+        }
+        App.Exiting = true;
+    }
+
+    void SaveWindowSettings()
+    {
+        var s = Settings.Current;
+        if (!IsVisible) return;
+        s.Maximized = WindowState == WindowState.Maximized;
+        if (WindowState == WindowState.Normal)
+        {
+            s.Width = Width;
+            s.Height = Height;
+        }
+        s.Save();
+    }
+
+    void HideToTray()
+    {
+        if (_current is IPage page) page.OnHidden();
+        Hide();
+        var s = Settings.Current;
+        if (s.TrayHintShown) return;
+        _tray?.Notify("Tman is still running", "It's in the system tray. Click an icon to open it, or right-click and choose Exit Tman to close it.");
+        s.TrayHintShown = true;
+        s.Save();
+    }
+
+    void ShowFromTray()
+    {
+        bool wasHidden = !IsVisible;
+        Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+        if (wasHidden && _current is IPage page) page.OnShown();
+    }
+
+    void OpenTraySettings()
+    {
+        ShowFromTray();
+        new TraySettingsDialog(() => _tray?.Sync(SystemMonitor.Instance.Latest), () => _tray?.Rebuild()) { Owner = this }.ShowDialog();
+    }
+
+    void ExitApp()
+    {
+        App.Exiting = true;
+        Close();
+    }
+
+    void TraySettings_Click(object sender, RoutedEventArgs e) => OpenTraySettings();
 
     void BuildNav()
     {
@@ -148,6 +215,7 @@ public partial class MainWindow : Window
         StatusMem.Text = $"{s.Mem.UsedPct:0}%  ({Fmt.Bytes(s.Mem.Used)} / {Fmt.Bytes(s.Mem.Total)})";
         StatusMemBar.Value = s.Mem.UsedPct / 100;
         StatusUptime.Text = $"Up {Fmt.Uptime(s.Uptime)}";
+        _tray?.Sync(s);
     }
 
     /// <summary>Status bar clock, flight-recorder length and the blinking REC light; runs even while sampling is paused.</summary>
@@ -202,7 +270,7 @@ public partial class MainWindow : Window
         {
             Settings.Current.Save();
             Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas" });
-            Application.Current.Shutdown();
+            App.Quit();
         }
         catch (System.ComponentModel.Win32Exception)
         {
@@ -210,7 +278,7 @@ public partial class MainWindow : Window
         }
     }
 
-    void Exit_Click(object sender, RoutedEventArgs e) => Close();
+    void Exit_Click(object sender, RoutedEventArgs e) => ExitApp();
 
     void Refresh_Click(object sender, RoutedEventArgs e) => SystemMonitor.Instance.RefreshNow();
 
@@ -263,7 +331,13 @@ public partial class MainWindow : Window
         if (only == "details")
         {
             await SnapDetails(dir, extra);
-            Application.Current.Shutdown();
+            App.Quit();
+            return;
+        }
+        if (only == "tray")
+        {
+            await SnapTray(dir);
+            App.Quit();
             return;
         }
         if (only == "flight" && int.TryParse(extra, out var recordSeconds)) await Task.Delay(recordSeconds * 1000);
@@ -281,7 +355,7 @@ public partial class MainWindow : Window
             if (_current is UserControl { Content: ScrollViewer { Content: FrameworkElement inner } })
                 SavePng(inner, Path.Combine(dir, key + "-full.png"));
         }
-        Application.Current.Shutdown();
+        App.Quit();
     }
 
     /// <summary>Dev aid: <c>--snap &lt;dir&gt; details [pid]</c> renders each Details tab and exercises dump, affinity and signature checks.</summary>
@@ -313,6 +387,61 @@ public partial class MainWindow : Window
         foreach (var g in SystemMonitor.Instance.Latest?.Gpus ?? new())
             checks.Add($"gpu {g.Name}: {g.Sensors?.ToString() ?? "no sensors"}");
         File.WriteAllLines(Path.Combine(dir, "details-checks.txt"), checks);
+    }
+
+    /// <summary>
+    /// Dev aid: <c>--snap &lt;dir&gt; tray</c> draws every tray metric in both styles at each tray size (through a real
+    /// HICON round trip, enlarged 4×), then briefly adds live icons to check the shell accepts them.
+    /// </summary>
+    async Task SnapTray(string dir)
+    {
+        var snap = SystemMonitor.Instance.Latest;
+        int[] sizes = { 16, 20, 24, 32 };
+        const int scale = 4, cell = 32 * scale + 12;
+        var sheet = new System.Windows.Media.DrawingVisual();
+        using (var dc = sheet.RenderOpen())
+        {
+            dc.DrawRectangle(System.Windows.Media.Brushes.Black, null, new Rect(0, 0, cell * sizes.Length * 2, cell * TrayMetrics.All.Length));
+            for (int row = 0; row < TrayMetrics.All.Length; row++)
+            {
+                var m = TrayMetrics.All[row];
+                var reading = snap == null ? null : m.Read(snap);
+                for (int col = 0; col < sizes.Length * 2; col++)
+                {
+                    int size = sizes[col % sizes.Length];
+                    var hicon = TrayRenderer.ToHIcon(TrayRenderer.Render(reading, m.Color, meter: col >= sizes.Length, size));
+                    var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(hicon, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+                    Native.DestroyIcon(hicon);
+                    var group = new System.Windows.Media.DrawingGroup();
+                    System.Windows.Media.RenderOptions.SetBitmapScalingMode(group, System.Windows.Media.BitmapScalingMode.NearestNeighbor);
+                    group.Children.Add(new System.Windows.Media.ImageDrawing(src, new Rect(col * cell + 6, row * cell + 6, size * scale, size * scale)));
+                    dc.DrawDrawing(group);
+                }
+            }
+        }
+        int w = cell * sizes.Length * 2, h = cell * TrayMetrics.All.Length;
+        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        rtb.Render(sheet);
+        var png = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+        using (var fs = File.Create(Path.Combine(dir, "tray-sheet.png"))) png.Save(fs);
+
+        var checks = new List<string> { "rows: " + string.Join(", ", TrayMetrics.All.Select(m => m.Key)), "columns: number 16/20/24/32, meter 16/20/24/32" };
+        foreach (var m in TrayMetrics.All)
+            checks.Add($"{m.Key}: {(snap == null ? "no sample" : m.Read(snap)?.ToString() ?? "not available")}");
+        using (var tray = new TrayIcons(() => { }, () => { }, () => { }))
+        {
+            tray.Sync(snap);
+            checks.Add($"live icons accepted by the shell: {tray.Shown} of {Settings.Current.TrayItems.Count}");
+            await Task.Delay(1500);
+        }
+        File.WriteAllLines(Path.Combine(dir, "tray-checks.txt"), checks);
+
+        var dialog = new TraySettingsDialog(() => { }, () => { }) { Owner = this, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20000, Top = 0 };
+        dialog.Show();
+        await Task.Delay(1500);
+        SavePng((FrameworkElement)dialog.Content, Path.Combine(dir, "tray-dialog.png"));
+        dialog.Close();
     }
 
     static void SavePng(FrameworkElement root, string path)

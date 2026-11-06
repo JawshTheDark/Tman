@@ -13,6 +13,15 @@ public sealed class Settings
     public bool Maximized { get; set; }
     public List<string> HiddenProcessColumns { get; set; } = new() { "Threads", "Handles", "Priority", "Command line" };
 
+    // System tray: one live icon per metric, in this order.
+    public bool TrayEnabled { get; set; } = true;
+    public List<string> TrayItems { get; set; } = new() { "cpu", "mem", "gpu" };
+    /// <summary>"number" draws the value; "meter" draws an LED bar.</summary>
+    public string TrayStyle { get; set; } = "number";
+    /// <summary>Closing the window hides Tman to the tray instead of exiting.</summary>
+    public bool KeepInTray { get; set; } = true;
+    public bool TrayHintShown { get; set; }
+
     static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Tman", "settings.json");
 
