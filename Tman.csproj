@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Tman.ico</ApplicationIcon>
     <NoWarn>$(NoWarn);WPF0001;CA1416;SYSLIB1054</NoWarn>
     <Product>Tman</Product>
     <Version>0.1.0</Version>
