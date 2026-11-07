@@ -1,111 +1,238 @@
+<div align="center">
+
+<img src="docs/images/logo.png" width="96" height="96" alt="Tman logo">
+
 # Tman
 
-A lightweight task manager for Windows 11, built with C# / WPF on .NET 10 and the Windows 11 Fluent dark theme.
+**A task manager that grew into a Windows toolbox.**<br>
+Monitor, diagnose, tweak and repair Windows 11, run Docker and Hyper-V, all in one window.
 
-## Pages
+[![Windows 11](https://img.shields.io/badge/Windows-11-0078D4)](#download)
+[![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![WPF](https://img.shields.io/badge/WPF-C%23-68217A)](#under-the-hood)
+[![Portable](https://img.shields.io/badge/Portable-one%20exe-2EA44F)](#download)
+[![Release](https://img.shields.io/github/v/release/JawshTheDark/Tman?include_prereleases&label=release&color=3FC8FF)](https://github.com/JawshTheDark/Tman/releases)
+[![Build](https://github.com/JawshTheDark/Tman/actions/workflows/build.yml/badge.svg)](https://github.com/JawshTheDark/Tman/actions/workflows/build.yml)
 
-- **Summary**: an instrument-panel dashboard. LED arc gauges for CPU, memory, GPU (with temperature), disk, network and CPU power; the processor trace with an LED bar per logical processor; the busiest processes; memory, disk and network meters.
-- **Performance**: 60-second graphs per device. Includes a per-core CPU view, GPU engine graphs (3D, copy, video), GPU temperature, power, fan and clocks (NVIDIA through NVML, other GPUs through the same driver data Task Manager uses), disk transfer rates and network throughput.
-- **Processes**: every process, with CPU, memory, I/O and GPU columns shaded by load, and a Signer column (verified Authenticode signer, including Windows catalog signatures; unsigned programs show in amber). Supports search, end task or end tree, suspend/resume, set priority and CPU affinity, create a full memory dump, open file location and properties. Double-click (or Enter) opens a Details window with threads (state, CPU, name, start address), loaded modules, environment variables and open files. Its Wait chain tab, also reachable from "Analyze wait chain" on the right-click menu, shows what each blocked thread is waiting for, follows the chain into other processes by name, and calls out deadlocks in plain words. Apps that have stopped responding show in red in Status. A Network column shows each process's combined send and receive rate, from a trace that runs only as administrator and only while the column is visible. Right-click a column header to choose which columns show.
-- **System info**: OS, board, BIOS, CPU, RAM modules, GPUs, disks and network adapters, with a "Copy all" button.
-- **App history**: CPU time, GPU time, disk I/O, peak memory and launch count per app, kept across sessions. Windows keeps its own history in a database only Task Manager can read, so Tman records its own while it runs.
-- **Users**: signed-in sessions with their process count, CPU and memory. You can disconnect a session or sign it off.
-- **Startup apps**: registry Run keys and Startup folders, enabled or disabled the same way Windows does it (the StartupApproved keys); scheduled tasks that run at sign-in or startup (Windows' own tasks hidden unless you ask); plus RunOnce, Group Policy Run keys, Winlogon shell overrides and AppInit DLLs, which are shown for awareness and can be opened in Registry Editor.
-- **Services**: start, stop and restart services, change the startup type, and filter by state.
-- **Power & freq**: measured clock for each logical processor, throttling, core parking, CPU package and per-core power (from RAPL energy counters, where the CPU exposes them), and the power plan and Windows 11 power mode, which you can switch from here. It also shows the last wake source, recent sleep and wake history, wake timers, devices allowed to wake the PC, and what's keeping it awake. Wake timers and what's keeping it awake need administrator rights.
-- **Flight recorder**: the last hour of CPU, memory, GPU, disk, network and power in memory. Click the timeline to see the top processes at that moment. It also logs process starts and exits and sustained CPU or memory spikes, and exports to CSV.
-- **Connections**: TCP/UDP connections by owning process, with optional reverse-DNS host names. Right-click to block a program's outgoing traffic with a Tman-named firewall rule (needs admin).
-- **File locks**: find which processes have a file or folder open (or a DLL loaded), the usual cause of "file in use" errors, and end them. As a standard user only your own processes can be searched.
-- **Installed apps**: the uninstall registry, with size, version and date, plus an Uninstall button.
-- **Drivers**: signed PnP drivers with provider, version, date and signature, and an option to hide Microsoft drivers.
-- **Disk space**: drive usage, plus a fast parallel folder-size analyzer you can drill into. The Cleanup tab sizes up temp files, the Recycle Bin, thumbnail cache, crash dumps, error reports, update and Delivery Optimization files and the DirectX shader cache, then cleans what you tick. It skips files in use and reports how much was freed and skipped.
-- **Benchmarks**: about 30 seconds of CPU (single and multi-thread), memory (bandwidth and latency) and drive tests (sequential, random 4K at queue depths 32 and 1, unbuffered). Results are saved so you can compare runs. CPU scores are relative, with 1,000 about one Ryzen 9 7950X core. The drive test writes at most about 5 GB to a temp file that deletes itself.
+[Features](#features) •
+[Download](#download) •
+[Screenshots](#screenshots) •
+[Wiki](docs/wiki/Home.md) •
+[Status](#status) •
+[Building](#building)
+
+<img src="docs/images/summary.png" alt="The Summary page: LED arc gauges for CPU, memory, GPU, disk, network and CPU power, a processor trace with a bar per logical processor, the busiest processes, and memory, disk and network meters" width="100%">
+
+</div>
+
+## Why Tman
+
+Windows keeps its tools in a dozen places: Task Manager, Resource Monitor, Device Manager, Services, Event Viewer, Disk Cleanup, winget, the Settings app and a dozen Control Panel applets that are harder to find every year. Tman puts the jobs those tools do into one window:
+
+- **It explains itself.** Crash history says what a stop code means. Disk health gives a verdict and the reason. The leak monitor says *"climbing steadily, its lowest point is rising too, that's how a leak looks"* instead of handing you a graph.
+- **It's careful.** Tman runs as a standard user and says which actions need more. Tweaks save the old value first, so turning one off puts back exactly what was there. Hosts file and environment changes get a dated backup. Docker shows the exact command before anything runs, and every destructive action says what's lost.
+- **It's one file.** A single exe, no installer, no service. Settings live in `%APPDATA%\Tman`. It doesn't phone home: the network is used only for the things you ask for, such as template lists, app icons and winget.
+- **It's quick.** Process data comes from one kernel call, counters are the same ones Task Manager reads, and everything slow loads in the background.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/performance.png" alt="Performance: 60-second graphs per device, with a per-core CPU view and GPU engines"></td>
+    <td width="50%"><img src="docs/images/processes.png" alt="Processes: CPU, memory, I/O, GPU and network columns shaded by load, with a Signer column"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Performance: 60-second graphs per device, GPU engines, temperature, fan and clocks</sub></td>
+    <td align="center"><sub>Processes: columns shaded by load, verified signers, wait chains and deadlocks explained</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/crashes.png" alt="Crash history: one timeline of blue screens, unexpected shutdowns, app crashes and hangs"></td>
+    <td width="50%"><img src="docs/images/health.png" alt="Disk health: a verdict per drive with temperature, life remaining, power-on time and error counts"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Crash history: blue screens, shutdowns, crashes and hangs on one timeline, in plain words</sub></td>
+    <td align="center"><sub>Disk health: a verdict and the reason for every drive, NVMe without admin</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/leaks.png" alt="Leak monitor: each app gets a verdict, with a trend chart of the selected one"></td>
+    <td width="50%"><img src="docs/images/memory.png" alt="Memory map: what RAM is really used for, standby by priority, and the top pool tags"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Leak monitor: a verdict per app and kernel pool tag, zombie process counting, and a scan log</sub></td>
+    <td align="center"><sub>Memory map: in use, modified, standby, free and reserved, with a plain line for each</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/tweaks.png" alt="Tweaks: 153 Windows settings showing their live value, with presets, undo, export and import"></td>
+    <td width="50%"><img src="docs/images/docker-quick.png" alt="Docker Quick deploy: a gallery of about 840 self-hosted apps with icons, merged from several template lists"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Tweaks: 153 settings with their live value, presets that make a restore point first, and undo</sub></td>
+    <td align="center"><sub>Docker Quick deploy: about 840 apps with icons, a form and the exact command before anything runs</sub></td>
+  </tr>
+</table>
+
+## Features
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### Monitor
+
+- **Summary**: an instrument panel with LED arc gauges for CPU, memory, GPU, disk, network and CPU power, a trace per logical processor and the busiest processes
+- **Performance**: 60-second graphs per device, a per-core CPU view, GPU engines, temperature, power, fan and clocks
+- **Processes**: CPU, memory, I/O, GPU and network columns shaded by load; verified **signer** for every exe; end task or tree, suspend, priority, affinity, memory dump; a Details window with threads, modules, environment, open files and **wait chains** that call out deadlocks
+- **App history** kept across sessions, since Windows' own is locked away
+- **Startup apps**, including scheduled tasks at sign-in and the hidden places: RunOnce, policy Run keys, Winlogon and AppInit
+- **Power & freq**: measured clock per processor, throttling, core parking, package and per-core power, power plan and mode, sleep and wake history, and what's keeping the PC awake
+- **Flight recorder**: the last hour of everything; click the timeline to see the top processes at that moment
+- Services, Users, System info, Connections, File locks, Installed apps, Drivers, Disk space with a folder analyzer and cleanup, and Benchmarks
+
+</td>
+<td width="50%" valign="top">
 
 ### Diagnose
 
-- **Crash history**: one timeline of blue screens, unexpected shutdowns, app crashes and app hangs from the event logs, with counters, top crashing apps and filters by kind and time range. Stop codes and exception codes are explained in plain words, repeats of one app are merged, and blue screens link to their minidump.
-- **Event log**: a fast viewer for any readable log, filtered by level, time range and search text, with an option to group by source and the full message in a details pane. Reads are limited by time and capped at 10,000 events, and the page says when the cap is reached. Reading the Security log needs administrator rights.
-- **Disk health**: a card per physical drive with a verdict (Healthy, Check soon, Failing or Unknown) and the reason, plus temperature, life remaining, power-on time, data written and error counts. NVMe health is read without admin; admin adds read and write error totals and SMART data for SATA drives. A drive that doesn't report enough stays Unknown, never Healthy by default.
-- **Devices**: Device Manager's list with problem devices first, each problem in plain words with what to try. Filter by class or "Problems only", search, enable or disable a device, scan for hardware changes (those three need admin), and open Device Manager or search online.
-- **Battery**: charge, state, charge rate, voltage and time remaining, updated live, plus design against full charge capacity, wear and a plain verdict, and the cycle count where the battery reports one. Desktops show "This PC has no battery".
-- **Latency**: finds what's causing stutter and audio crackle. Runs a fixed kernel trace of every DPC and ISR, then shows per driver how many there were and their total, average and longest time in microseconds, with a plain verdict for audio and gaming and the likely culprit. Needs administrator rights.
-- **Memory map**: what RAM is really used for. A bar of in use, modified, standby, free, zero and hardware reserved with a plain line for each, standby by priority, commit, paged and non-paged pool, file cache and the top pool tags. It can also empty the standby list (admin), though Windows refills it and it rarely helps.
-- **Leak monitor**: finds slow memory leaks. Tman samples memory, handles, threads and kernel pools once a minute for as long as it runs, including from the tray, and keeps the history until Windows restarts. Each app and kernel pool tag gets a verdict: a likely leak keeps climbing and its lowest point rises too, while a cache that levels off, a garbage-collected app and a single big allocation don't count. It also splits total growth between apps, kernel pools and everything else, shows each trend on a chart, and can search loaded drivers for a growing pool tag. It also counts zombie processes, which have exited but are still held in kernel memory, shows whether apps or a driver are holding them, and can test whether new exits are leaking while you turn suspects off one at a time. **Scan** runs every check once and adds the results to `leak-scans.txt`, noting whether Windows is in Safe Mode, so runs can be compared. The log names apps and drivers but not your user name, PC name or file paths.
+- **Crash history**: blue screens, unexpected shutdowns, app crashes and hangs on one timeline, stop codes and exception codes explained, minidumps linked
+- **Event log**: a fast viewer for any log with level, time and text filters
+- **Disk health**: a verdict per drive, Healthy, Check soon, Failing or Unknown, with the reason; never Healthy by default
+- **Devices**: Device Manager's list with problems first and what to try
+- **Battery**: charge, wear and cycle count with a plain verdict
+- **Latency**: a kernel trace of every DPC and ISR, per driver, with a verdict for audio and gaming and the likely culprit
+- **Memory map**: what RAM is really used for, standby by priority, commit, pools and the top pool tags
+- **Leak monitor**: samples memory, handles, threads and kernel pools every minute, gives each app and pool tag a verdict that tells a leak from a cache, counts **zombie processes** stuck in kernel memory, and **Scan** logs every check to a text file
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
 ### Admin
 
-- **Tweaks**: 153 Windows settings for privacy, AI features, ads, Explorer, the right-click menu, the taskbar, notifications, performance, input, Windows Update, security and the system, each showing the live value and applying as soon as you click it. Search them or filter by group. Tman saves the old value first, so turning a tweak off puts back exactly what was there. Minimal, Standard and Advanced presets confirm the exact list and create a restore point first when running as administrator. The set can be exported and imported to apply on another PC. Tweaks that change the whole PC need admin.
-- **Context menus**: every entry Explorer can add to its right-click menus, including shell extensions and Windows 11 app entries, with where it shows, who added it and what it runs. Hide an entry and bring it back, keep a command for Shift + right-click, or add your own commands for files, folders, the desktop and drives. Hiding needs no admin and never deletes anything, Tman only deletes commands added here, and anything Windows needs to open items stays locked.
-- **Get apps**: a bulk installer built on winget. Browse has 120 popular free apps by category with install status, plus a live search of the whole winget catalog; tick apps to install or uninstall them, or export the list as a JSON file that works on another PC. Updates lists available updates with Update selected and Update all. Built-in apps removes bundled Store apps for your account, keeps anything Windows depends on protected, and has a Select common extras button. Everything runs through a one-at-a-time queue with a live log and per-app results, and the queue can be cancelled between apps. Installing accepts each app's license and the winget source's terms for you.
-- **Windows features**: the useful optional features with a plain description, every other feature with search, and OpenSSH client and server with service and firewall state. Turning something on or off runs through DISM with live output and says when a restart is needed.
-- **ISO builder**: turns an official Windows 11 ISO into a smaller one. Choose an ISO you already have (Tman doesn't download one) and an edition, tick which Store apps and extras to remove (ticked items are crossed out, and the confirmation lists each one), and optionally add an answer file that skips the Microsoft account step by creating a local administrator account with no password. Setup still asks which disk to install to. It checks for free space first (about 35 GB while it builds) and takes about 10 minutes to an hour, with live output, and your original ISO isn't changed. The ISO is set up to boot on BIOS and UEFI, and is made with `oscdimg` if the Windows ADK is installed, or with Windows' built-in image writer if it isn't, so there's nothing to install. Stopping a build, closing Tman or ending it in Task Manager discards the mounted image and deletes the temporary files. A second Tman process watches each build to make sure of that, and if the power goes too, Tman finishes the job the next time it starts as administrator. When a build finishes and a USB drive is plugged in, Tman asks whether to write it, and any ISO can be written from the USB card. The drive is formatted as FAT32, the format PCs can boot from, and a Windows image over 4 GB is split to fit. The confirmation names the drive and its size and warns that it erases the drive, and Tman refuses Windows' own drive and anything that isn't USB. Looking inside an ISO works for anyone; building and writing to USB need admin. Keep the ISO on a local drive, because running as administrator can hide mapped and mounted drives. Tested on a Windows 11 build 26300 ISO: a full build, a USB write, and a Hyper-V install under Secure Boot that reached the desktop on a local account with no network. Not tested yet: booting from a written USB drive, the answer file on a PC with internet, and ending a build partway, other than stopping it during the mount.
-- **Hyper-V**: virtual machines on this PC with state, CPU, memory and uptime. Start, shut down, turn off, pause, resume and save a VM, and take, apply and delete checkpoints. Open console shows the VM's screen with keyboard and mouse in a Tman window, from power-on with nothing installed in the VM, with a Ctrl+Alt+Delete button and full screen. That needs Tman running as administrator or membership of Hyper-V Administrators; otherwise it opens Hyper-V's own console window. New VM makes one from an ISO with a name, generation, memory, processors, disk size and network, plus Secure Boot and a virtual TPM for Generation 2. The defaults suit Windows 11, and if a step fails, what was made so far is removed. Turning off, applying a checkpoint and deleting each say what's lost first, and deleting a VM asks separately about its disk files, leaving out any that another VM still uses. If Hyper-V isn't turned on, the page says so and points to Windows features. It never turns Hyper-V on itself. Needs admin or membership of the Hyper-V Administrators group.
-- **Control panels**: a launcher for classic Windows tools that are hard to find now, such as Programs and Features, Network Connections, User Accounts (automatic sign-in), Disk Management, Registry Editor, Group Policy, Reliability Monitor and the Windows Tools folder, grouped by purpose with a line on what each is for.
-- **Scheduled tasks**: every task in every folder with its state, last run, last result in plain words, next run, author and action. Filter out Microsoft's tasks, show failed runs, and search. Run, end, enable or disable a task, and select one to see its triggers and full action.
-- **Windows Update**: update history with failures explained in plain words, a background search for pending updates, the last check and install times, and an update mode: Default, Security-focused (feature updates wait 365 days, quality updates 4 days, drivers left out) or Pause for up to 5 weeks. It reads live values and says when someone else's policy set them. There is deliberately no option to turn updates off. Switching needs admin.
-- **Accounts**: local users and groups with enabled state, administrator status, last sign-in, password required and group memberships. Enable or disable an account and change who is an administrator, with a refusal if that would leave no enabled administrator. Passwords are never shown or set: use the buttons for User Accounts and Local Users and Groups. Changes need admin.
-- **Environment**: user and system variables as stored, so %NAME% references and REG_EXPAND_SZ survive. Add, edit and delete, plus a PATH editor that flags missing folders and duplicates and lets you reorder and remove entries. Each change saves a dated backup to `%APPDATA%\Tman\backups\` first and tells running apps. System variables need admin.
-- **Shared folders**: shares with admin shares marked, connected sessions, open files, and whether file sharing is on for the network in use. Stop sharing or close a session. Sessions, open files and both actions need admin.
-- **Docker**: containers with live CPU and memory, images, volumes, networks and Compose stacks, with start, stop, remove, logs, a shell and open in browser. Edit reopens a running container or stack in a form with its current settings. Tman shows the exact commands and names what's lost, keeps volumes and folders, and sets the old container aside until the new one is running, so a bad change puts it back. A new name or restart policy doesn't need a new container at all. Update gets a newer image and keeps the same settings, and Check for updates shows which images have one. Networks are a drawing you can edit: drag a container onto a network, and nothing changes until you apply it. Quick deploy merges any number of Portainer-format template lists into one gallery of apps with icons, keeps each app's different builds as versions, and shows a form and the exact command before anything runs. Everything in the form can be changed, and an edited copy can be saved as your own template. Ports stay on this PC unless you open them, and paths from a template author's server become Docker volumes. If Docker isn't installed, the page can install Docker Desktop. Compose and settings files open in an editor with line numbers and coloured keys, values and comments, and **Fix formatting** lays a file out the standard way (two spaces a level, lists indented under their key) by changing spacing only, then points out anything it can't settle, such as a repeated key.
+- **Tweaks**: 153 settings for privacy, AI features, ads, Explorer, the taskbar, Windows Update, security and more, each showing its live value; Minimal, Standard and Advanced presets that create a restore point first; undo, export and import
+- **Context menus**: every right-click entry, who added it and what it runs; hide, restore, keep for Shift + right-click, or add your own
+- **Get apps**: a bulk installer on winget, with 120 popular apps by category, a live catalog search, updates, and removal of built-in Store apps
+- **ISO builder**: turns an official Windows 11 ISO into a smaller one, with an answer file that skips the Microsoft account, and writes it to USB
+- **Windows features**, including OpenSSH client and server
+- **Control panels**: the classic tools that are hard to find now, grouped by purpose
+- **Scheduled tasks** with last results in plain words
+- **Windows Update**: history with failures explained, and Default, Security-focused or Pause modes. There is no off switch, on purpose
+- **Accounts**, **Environment** with a PATH editor that flags missing folders and duplicates, and **Shared folders**
 
-### Network
+</td>
+<td width="50%" valign="top">
 
-- **Firewall**: Domain, Private and Public status with default actions, plus every rule with filters for direction, action, state and non-Microsoft rules. Enable, disable or delete rules and turn a profile on or off (needs admin).
-- **Network tools**: live ping and traceroute, DNS lookup with reverse names, adapter details, DNS provider switching (Automatic, Cloudflare, Google, Quad9 or custom), flush DNS, restart adapter, and saved Wi-Fi network names. Passwords are never read.
-- **Hosts file**: entries as rows plus raw text, with add, edit, remove, enable and disable. Comments, order, encoding and line endings are kept. Each save makes a dated backup you can restore and flushes the DNS cache, and entries that redirect well-known sites are flagged. Saving needs admin.
-- **Security**: a read-only board for antivirus, firewall, Secure Boot, TPM, memory integrity, BitLocker, UAC, Smart App Control, SmartScreen and Remote Desktop, with what each state means. Anything Tman can't read shows as unknown, never good.
+### Docker and virtual machines
 
-### Repair
+- **Containers** with live CPU and memory, images, volumes, networks and Compose **stacks**: start, stop, remove, logs, a shell, open in browser
+- **Edit** a running container or stack in a form; the old one is set aside until the new one runs, so a bad change puts it back
+- **Update** to a newer image with the same settings, and **Check for updates**
+- A **network map** you can edit by dragging containers onto networks
+- **Quick deploy**: about 840 self-hosted apps with icons, merged from nine Portainer-format template lists (add your own), with versions, a form and the exact command before anything runs
+- Safe defaults: ports stay on this PC unless you open them, template paths become volumes, privileged containers are flagged
+- A **Compose editor** with line numbers, colours and **Fix formatting**
+- Installs Docker Desktop if it's missing
+- **Hyper-V**: VMs with state, CPU, memory and uptime; start, shut down, pause, save, checkpoints, **New VM** from an ISO, and a built-in **console** with keyboard, mouse and Ctrl+Alt+Delete
 
-- **System repair**: runs Windows' repair tools one at a time with live output and a plain-language result: scan system files, check or repair the Windows image, scan a drive for errors, reset the network, reset Windows Update (folders are renamed, never deleted) and repair winget. Needs administrator rights.
-- **Restore points**: lists restore points with date, description and type, shows whether System Protection is on, creates a new one and explains when Windows skips it, and opens System Restore and System Protection. The list needs administrator rights.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
-## Tray icons
+### Network and repair
 
-Tman shows one live icon in the system tray, with a colored bar for each of up to three metrics. Hover over it for a flyout with every reading, or choose separate icons with a number or LED meter each. Set this up in **View > Tray icons…**:
+- **Firewall**: profiles and every rule, with filters for direction, action, state and non-Microsoft rules
+- **Network tools**: live ping and traceroute, DNS lookup, adapter details, DNS provider switching (Cloudflare, Google, Quad9 or your own), flush DNS, restart adapter, saved Wi-Fi names
+- **Hosts file** editor that keeps comments and order, backs up before each save, and flags entries that redirect well-known sites
+- **Security** board: antivirus, firewall, Secure Boot, TPM, memory integrity, BitLocker, UAC, Smart App Control, SmartScreen and Remote Desktop, with what each state means
+- **System repair**: SFC, DISM, chkdsk, network reset, Windows Update reset and winget repair, one at a time with live output and a plain result
+- **Restore points**: list, create, and open System Restore
 
-- **Metrics**: CPU usage, memory, GPU usage, GPU temperature, disk activity, network download, network upload, CPU power and CPU clock. CPU, memory and GPU are on by default. The order in the list is the order in the tray.
-- **Style**: a number with a level strip, or an LED meter, each in the metric's color.
-- **Behavior**: hover for the flyout (a plain tooltip with separate icons), click to open Tman, right-click for a menu (Open, Tray icons…, Exit). By default, closing the window keeps Tman running in the tray. You can turn that off in the same dialog.
-- **One copy**: starting Tman again brings the running copy forward instead of adding a second set of icons. If the new start is a newer build, Tman offers to replace the older copy.
-- **Visibility**: Windows 11 puts new tray icons in the hidden-icons flyout (^). **Always show on the taskbar** pins them, or use Settings > Personalization > Taskbar > Other system tray icons.
+</td>
+<td width="50%" valign="top">
 
-## Build and run
+### Tray and everyday use
+
+- One live **tray icon** with a coloured bar per metric (up to three), and a flyout with every reading on hover; or separate icons with a number or LED meter each
+- Closing the window keeps Tman in the tray, and only **one copy** runs: starting it again brings the window forward
+- Runs as a **standard user**; pages that need more say so and offer **Restart as administrator**
+- **Search** on every list page, and a column chooser on the process list
+- Dark Fluent look with Tahoma throughout, and the instrument panel frame reserved for live readings
+- Everything it saves is in `%APPDATA%\Tman`: settings, history, benchmark results, undo records, backups and template caches
+
+</td>
+</tr>
+</table>
+
+## Download
+
+1. Install the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) for x64, if you don't have it.
+2. Download `Tman.exe` from the [latest release](https://github.com/JawshTheDark/Tman/releases/latest) and run it. There is nothing to install, so keep it in any folder.
+
+Windows SmartScreen may warn you the first time, because Tman isn't code-signed yet. Each release lists the SHA-256 of its exe, so you can check your download:
+
+```powershell
+Get-FileHash .\Tman.exe -Algorithm SHA256
+```
+
+Tman runs as a standard user and most pages work that way. Changing the whole PC, such as system-wide tweaks, firewall rules, latency traces and repairs, needs administrator rights; those pages tell you, and **File > Restart as administrator** gets you there.
+
+## Status
+
+Tman **0.2.0** is a pre-release. Every page renders and the monitoring and read-only pages have run on real hardware, but many actions that change Windows have only been proven on throwaway keys and stand-ins so far. The wiki's [Testing status](docs/wiki/Testing-Status.md) page says plainly what has been tested and what hasn't, so create a restore point before using Tweaks, Repair or the ISO builder on a PC you care about.
+
+Found something wrong? [Open an issue](https://github.com/JawshTheDark/Tman/issues/new/choose).
+
+## Building
+
+Tman is C# and WPF on .NET 10. With the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) installed:
 
 ```bash
 dotnet run -c Release
 ```
 
-Single-file exe (needs the .NET 10 Desktop Runtime):
+To make the single-file exe (it still needs the .NET 10 Desktop Runtime on the PC that runs it):
 
 ```bash
 dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o publish
 ```
 
-Tman runs as a normal user. Ending system processes, managing services and changing all-users startup entries need admin: use **File > Restart as administrator**.
+The `--snap` flag renders any page to a PNG off-screen, which is how the screenshots here were made. Every flag is listed in [Building Tman](docs/wiki/Building.md).
 
-## How it gets its data
+## Under the hood
 
-- Processes come from a single `NtQuerySystemInformation` call. That gives CPU time, memory, I/O and thread state for every process (protected ones included) without opening handles. Image paths for protected processes come from `SystemProcessIdInformation`.
-- CPU, GPU and disk use PDH counters. CPU uses `% Processor Utility`, the same counter Windows 11 Task Manager uses. GPU names and memory sizes come from DXGI.
-- Per-processor clocks come from the `Actual Frequency` counter, throttling from `% Performance Limit`, and power from the `Energy Meter` counters. None of these need admin.
-- Static hardware info is loaded once, in the background, through WMI.
+| Part | How it works |
+| --- | --- |
+| Processes | One `NtQuerySystemInformation` call gives CPU time, memory, I/O and thread state for every process, protected ones included, without opening handles |
+| Counters | PDH: `% Processor Utility` for CPU (the same counter as Task Manager), `Actual Frequency` and `% Performance Limit` per processor, `Energy Meter` for power; DXGI for GPU names and memory, NVML for NVIDIA sensors |
+| Traces | ETW kernel traces for the latency capture and the per-process network column |
+| Hardware | WMI, loaded once in the background |
+| Hyper-V | WMI (`Msvm_*` classes) for machines and checkpoints; the console uses the same Remote Desktop connection as `vmconnect` |
+| Docker | The `docker` command line with argument lists, never a shell; template values are treated as untrusted |
+| Editor | [AvalonEdit](https://github.com/icsharpcode/AvalonEdit) for Compose and settings files |
+| Storage | JSON files in `%APPDATA%\Tman`, listed in [Getting started](docs/wiki/Getting-Started.md#where-your-data-lives) |
 
-Settings, app history and benchmark results live in `%APPDATA%\Tman\` (`settings.json`, `app-history.json`, `benchmarks.json`, `leak-history.json`, `leak-scans.txt`). The same folder holds the old values for undoing tweaks (`tweaks-undo.json`), and dated copies of the hosts file and environment variables from before each change (`backups\`). Quick deploy keeps saved lists in `docker-templates\`, icons in `docker-icons\`, your own templates in `docker-my-templates.json` and each deployed stack in `docker-stacks\`. `docker-map.json` remembers where you moved the boxes on the network map. Unexpected errors are written to `errors.log`. While an ISO is being built, `iso-build.json` names its work folder so that it can be cleaned up even if Tman dies, and `iso-cleanup.log` records any cleanup done after Tman has gone.
+## Documentation
 
-## Dev flags
+| Page | What's in it |
+| --- | --- |
+| [Getting started](docs/wiki/Getting-Started.md) | Install, administrator rights, the tray, where your data lives |
+| [Monitoring](docs/wiki/Monitoring.md) | Summary, Performance, Processes and the other everyday pages |
+| [Diagnose](docs/wiki/Diagnose.md) | Crash history, event log, disk health, devices, battery, latency, memory map, leak monitor |
+| [Tweaks](docs/wiki/Tweaks.md) | The 153 settings, presets, undo, and what's left out on purpose |
+| [Context menus](docs/wiki/Context-Menus.md) | Hiding, restoring and adding right-click entries |
+| [Docker](docs/wiki/Docker.md) | Containers, stacks, editing, updates, Quick deploy, template lists, the Compose editor |
+| [ISO builder](docs/wiki/ISO-Builder.md) | Making a smaller Windows 11 ISO and writing it to USB |
+| [Hyper-V](docs/wiki/Hyper-V.md) | Virtual machines, checkpoints, New VM, the console |
+| [Other admin tools](docs/wiki/Admin-Tools.md) | Get apps, Windows features, control panels, scheduled tasks, Windows Update, accounts, environment, shares |
+| [Network](docs/wiki/Network.md) | Firewall, network tools, hosts file, the security board |
+| [Repair](docs/wiki/Repair.md) | System repair and restore points |
+| [Tray icon](docs/wiki/Tray-Icon.md) | Metrics, styles, the flyout and visibility |
+| [Testing status](docs/wiki/Testing-Status.md) | What has been proven and what hasn't |
+| [Building Tman](docs/wiki/Building.md) | Build, publish, how it gets its data, dev flags |
 
-- `--snap <dir> [page] [extra]` renders pages to PNGs off-screen and exits. Scrolling pages also get a `-full.png` capture. `extra` depends on the page:
-  - Disk space: a folder to analyze.
-  - Benchmarks: any value runs the benchmarks first.
-  - Flight recorder: the number of seconds to record first.
-  - File locks: a path or name to search for.
-  - Performance: a device key prefix to select, e.g. `gpu`.
-  - ISO builder: an ISO to read first.
-  - Leak monitor: `sample` fills the page with made-up history.
-  - Hyper-V: `sample` fills the page with made-up machines, for checking the layout on a PC without Hyper-V, and `sample output` adds the job panel.
-- `--size <w>x<h>` after `--snap` sets the window size for the render, e.g. `--size 820x520`.
-- `--snap <dir> tray` renders every tray icon in both styles at each tray size into `tray-sheet.png`, briefly registers live icons to check the shell accepts them, and renders the settings dialog.
-- `--snap <dir> details [pid]` renders each tab of the process Details window (Tman itself by default) and writes `details-checks.txt` with dump, affinity, signature and GPU sensor checks.
-- `--snap <dir> latency [seconds]` runs a capture of that length first. It needs admin.
-- `--offscreen [page]` runs normally but out of view, for profiling.
+The same pages are on the [Wiki tab](https://github.com/JawshTheDark/Tman/wiki).
+
+## Credits
+
+The Compose editor is [AvalonEdit](https://github.com/icsharpcode/AvalonEdit) (MIT). Quick deploy's app icons fall back to the [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) set, and its gallery is built from template lists kept by [TomChantler](https://github.com/TomChantler/portainer-templates), [Lissy93](https://github.com/Lissy93/portainer-templates), [xneo1](https://github.com/xneo1/portainer_templates), [ntv-one](https://github.com/ntv-one/portainer), [dnburgess](https://github.com/dnburgess/self-hosted-template), [Qballjos](https://github.com/Qballjos/portainer_templates), [SelfhostedPro](https://github.com/SelfhostedPro/selfhosted_templates), [technorabilia](https://github.com/technorabilia/portainer-templates) and [mikestraney](https://github.com/mikestraney/portainer-templates). Get apps installs through [winget](https://github.com/microsoft/winget-cli).
