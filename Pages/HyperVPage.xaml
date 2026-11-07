@@ -46,7 +46,7 @@
             </Grid.RowDefinitions>
             <WrapPanel Style="{StaticResource ActionRow}">
                 <Button x:Name="ConsoleButton" Content="Open console" Margin="0,0,8,8" IsEnabled="False" Click="Console_Click"
-                        ToolTip="Opens this VM's screen in Hyper-V's console window. Double-clicking a VM does the same." />
+                        ToolTip="Shows this VM's screen with keyboard and mouse. It opens inside Tman when Tman runs as administrator, and in Hyper-V's own window otherwise. Double-clicking a VM does the same." />
                 <Button x:Name="StartButton" Content="Start" Margin="0,0,8,8" IsEnabled="False" Click="Start_Click" />
                 <Button x:Name="ShutDownButton" Content="Shut down" Margin="0,0,8,8" IsEnabled="False" Click="ShutDown_Click"
                         ToolTip="Asks the system inside the VM to shut down, as if you'd chosen Shut down in it." />

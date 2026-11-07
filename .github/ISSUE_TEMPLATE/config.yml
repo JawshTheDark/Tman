@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/JawshTheDark/Tman/wiki
+    about: Guides for every page, what needs administrator rights, and where Tman keeps its files.
+  - name: Testing status
+    url: https://github.com/JawshTheDark/Tman/blob/main/docs/wiki/Testing-Status.md
+    about: What has been proven on real hardware and what hasn't, before you report it.

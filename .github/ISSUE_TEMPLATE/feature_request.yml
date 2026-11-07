@@ -1,0 +1,21 @@
+name: Feature request
+description: A page, a tweak, a column or a tool you wish Tman had.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like Tman to do?
+      description: Describe the job, not just the button. Which Windows tool or utility would it replace?
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How do you do it today?
+      description: The tool, command or steps you use now, if any.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Mock-ups, links to documentation, or pitfalls you know about.

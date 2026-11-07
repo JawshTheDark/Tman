@@ -184,7 +184,7 @@ public partial class HyperVPage : UserControl, IPage
     {
         var power = SelectedVm?.Data.Power;
         bool idle = !_running && power != null;
-        ConsoleButton.IsEnabled = idle && HyperV.HasConsole;
+        ConsoleButton.IsEnabled = idle && (HyperV.HasConsole || VmConsoleWindow.CanConnect);
         StartButton.IsEnabled = idle && power is VmPower.Off or VmPower.Saved;
         ShutDownButton.IsEnabled = idle && power == VmPower.Running;
         PauseButton.IsEnabled = idle && power is VmPower.Running or VmPower.Paused;
@@ -233,7 +233,9 @@ public partial class HyperVPage : UserControl, IPage
     void OpenConsole()
     {
         if (SelectedVm?.Data is not { } vm) return;
-        if (HyperV.OpenConsole(vm) is { } failed) Ui.Error($"The console didn't open.\n\n{failed}");
+        // Without those rights, Hyper-V's own window can still ask for them.
+        if (VmConsoleWindow.CanConnect) VmConsoleWindow.Show(vm, Window.GetWindow(this));
+        else if (HyperV.OpenConsole(vm) is { } failed) Ui.Error($"The console didn't open.\n\n{failed}");
     }
 
     async void Start_Click(object sender, RoutedEventArgs e) => await Change(VmAction.Start, "Starting");

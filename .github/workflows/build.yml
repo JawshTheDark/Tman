@@ -1,0 +1,31 @@
+name: Build
+
+# Builds the single-file exe on every push and pull request, so a broken build shows up on the commit, and keeps the
+# result as a downloadable artifact for a few days.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', '**.md', '.github/ISSUE_TEMPLATE/**']
+  pull_request:
+    paths-ignore: ['docs/**', '**.md', '.github/ISSUE_TEMPLATE/**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish
+        run: dotnet publish Tman.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Tman
+          path: out/Tman.exe
+          retention-days: 14

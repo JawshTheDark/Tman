@@ -1,0 +1,40 @@
+name: Release
+
+# Pushing a tag such as v0.3.0 builds Tman.exe and drafts a release with it attached, the notes from
+# docs/releases/<tag>.md (if that file exists) and the exe's SHA-256. The draft is private until it is published
+# on the Releases page, so there is time to read it over first.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish
+        run: dotnet publish Tman.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o out
+
+      - name: Draft the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          $hash = (Get-FileHash out/Tman.exe -Algorithm SHA256).Hash.ToLower()
+          $notes = if (Test-Path "docs/releases/$env:TAG.md") { Get-Content "docs/releases/$env:TAG.md" -Raw } else { "" }
+          $notes = $notes.TrimEnd() + "`n`nSHA-256 of ``Tman.exe``: ``$hash``"
+          Set-Content -Path notes.md -Value $notes -Encoding utf8
+          $version = $env:TAG.TrimStart('v')
+          $flags = @()
+          if ($version -match '^0\.' -or $version -match '-') { $flags += '--prerelease' }
+          gh release create $env:TAG out/Tman.exe --draft --title "Tman $version" --notes-file notes.md @flags

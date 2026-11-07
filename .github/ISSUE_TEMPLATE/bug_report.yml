@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in Tman is wrong, crashes or shows the wrong numbers.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Before filing, check [Testing status](https://github.com/JawshTheDark/Tman/blob/main/docs/wiki/Testing-Status.md): some features are known not to be tested yet.
+  - type: input
+    id: version
+    attributes:
+      label: Tman version
+      description: From Help > About, or the release you downloaded.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows build
+      description: Run `winver`, or look under Settings > System > About.
+      placeholder: "Windows 11 Pro 25H2, build 26200.1234"
+    validations:
+      required: true
+  - type: dropdown
+    id: admin
+    attributes:
+      label: Running as
+      options:
+        - Standard user
+        - Administrator (Restart as administrator or right-click, Run as administrator)
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      placeholder: "Processes, Docker, Tweaks…"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what Tman did instead. A screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: errors.log
+      description: If `%APPDATA%\Tman\errors.log` has an entry from the time it happened, paste it here. It names apps and files on your PC, so remove anything you'd rather keep private.
+      render: text
