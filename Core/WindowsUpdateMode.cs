@@ -4,14 +4,15 @@ using Microsoft.Win32;
 
 namespace Tman.Core;
 
-public enum UpdateMode { Default, Security, Paused, Custom }
+public enum UpdateMode { Default, Security, Paused, Off, Custom }
 
 /// <summary>What the live values on this PC say. <see cref="Notes"/> are plain sentences about anything set by someone other than Tman.</summary>
 public sealed record UpdateModeState(UpdateMode Mode, string Title, string Summary, bool SetByOthers, DateTime? PausedUntil, IReadOnlyList<string> Notes);
 
 /// <summary>
-/// The update mode: Windows' documented update policies for Security-focused, and Windows' own pause setting for Pause. There is deliberately
-/// no way to turn updates off here. Tman records when it set the policies, so values it finds that it didn't set can be called someone else's.
+/// The update mode: Windows' documented update policies for Security-focused, Windows' own pause setting for Pause, and for Off the
+/// no-automatic-updates policy together with disabling the update services. Tman records when it set these, so values it finds that it
+/// didn't set can be called someone else's.
 /// </summary>
 public static class WindowsUpdateMode
 {
@@ -25,6 +26,15 @@ public static class WindowsUpdateMode
     const string MarkerPath = TmanPath + @"\WindowsUpdate";
     const string MarkerValue = "Mode";
     const string SecurityMarker = "Security-focused";
+    const string OffMarker = "Off";
+    const string PrevStartsValue = "PrevServiceStarts";
+    const string ServicesPath = @"SYSTEM\CurrentControlSet\Services";
+
+    /// <summary>The services Off disables. wuauserv downloads and installs, UsoSvc orchestrates, BITS transfers the files.</summary>
+    static readonly string[] UpdateServices = { "wuauserv", "UsoSvc", "BITS" };
+
+    /// <summary>Windows' own startup types, used to put a service back when Tman has no saved value for it.</summary>
+    static readonly Dictionary<string, int> DefaultServiceStart = new(StringComparer.OrdinalIgnoreCase) { ["wuauserv"] = 3, ["UsoSvc"] = 2, ["BITS"] = 3 };
 
     const int FeatureDays = 365;
     const int QualityDays = 4;
@@ -58,7 +68,9 @@ public static class WindowsUpdateMode
         bool anyOurs = policyNames.Any(ours.Contains);
         bool isSecurity = SecurityPolicy.All(p => policy?.GetValue(p.Name) is int v && v == p.Value);
         using var marker = hklm.OpenSubKey(MarkerPath);
-        bool setByTman = marker?.GetValue(MarkerValue) as string == SecurityMarker;
+        var markerMode = marker?.GetValue(MarkerValue) as string;
+        bool setByTman = markerMode == SecurityMarker;
+        int? noAutoUpdate = AuNoAutoUpdate(hklm);
         var pausedUntil = ReadPausedUntil(hklm);
         bool pausedElsewhere = pausedUntil == null && PausedWithoutWindowsSetting(hklm);
 
@@ -74,6 +86,15 @@ public static class WindowsUpdateMode
 
         bool foreignPolicy = anyOurs && (!isSecurity || !setByTman) || mdmControls;
         const string foreign = "Set by someone else's policy, not by Tman.";
+        if (noAutoUpdate == 1)
+        {
+            bool offByTman = markerMode == OffMarker;
+            var summary = "Windows Update is turned off. The update services are disabled and a policy stops automatic updates, security fixes included. "
+                + (offByTman ? "Set by Tman. " : foreign + " ")
+                + "Windows' repair service can switch the services back on, so the policy is the part that holds. A restart is needed to stop updates already under way.";
+            if (anyOurs) notes.Add("Deferral policies are set too.");
+            return new UpdateModeState(UpdateMode.Off, "Off", summary, !offByTman, null, notes);
+        }
         if (pausedUntil is { } until)
         {
             if (anyOurs) notes.Add(isSecurity && setByTman ? "The Security-focused policies are still set too." : "Deferral policies are set too. " + foreign);
@@ -154,17 +175,39 @@ public static class WindowsUpdateMode
         return (key?.GetValue("EditionID") as string)?.StartsWith("Core", StringComparison.OrdinalIgnoreCase) == true;
     }
 
-    /// <summary>Removes everything the other two modes set. Throws if Windows refuses, which it does without admin.</summary>
+    /// <summary>Removes everything the other modes set, and turns the update services back on. Throws if Windows refuses, which it does without admin.</summary>
     public static void SetDefault()
     {
         using var hklm = Hklm();
+        ClearOff(hklm);
         ClearPolicy(hklm);
         ClearPause(hklm);
+    }
+
+    /// <summary>
+    /// Turns updates off: disables the update services and sets the no-automatic-updates policy. The services' current startup types are
+    /// saved first, so Default restores exactly what was there. Throws if Windows refuses, which it does without admin.
+    /// </summary>
+    public static void SetOff()
+    {
+        using var hklm = Hklm();
+        ClearPause(hklm);
+        var prev = UpdateServices.Select(s => (s, ServiceStart(hklm, s))).Where(p => p.Item2 != null).Select(p => $"{p.s}={p.Item2}").ToArray();
+        using (var au = hklm.CreateSubKey(PolicyPath + @"\AU", writable: true))
+        {
+            au.SetValue("NoAutoUpdate", 1, RegistryValueKind.DWord);
+            au.SetValue("AUOptions", 1, RegistryValueKind.DWord);
+        }
+        foreach (var s in UpdateServices) SetServiceStart(hklm, s, 4);
+        using var marker = hklm.CreateSubKey(MarkerPath, writable: true);
+        marker.SetValue(MarkerValue, OffMarker, RegistryValueKind.String);
+        marker.SetValue(PrevStartsValue, prev, RegistryValueKind.MultiString);
     }
 
     public static void SetSecurityFocused()
     {
         using var hklm = Hklm();
+        ClearOff(hklm);
         ClearPause(hklm);
         using var policy = hklm.CreateSubKey(PolicyPath, writable: true);
         foreach (var (name, value) in SecurityPolicy) policy.SetValue(name, value, RegistryValueKind.DWord);
@@ -189,6 +232,7 @@ public static class WindowsUpdateMode
         var now = DateTime.UtcNow;
         var start = RunningPauseStart(hklm) ?? now;
         var end = PauseEnd(weeks).ToUniversalTime();
+        ClearOff(hklm);
         ClearPolicy(hklm);
 
         string startText = start.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture), endText = end.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
@@ -197,6 +241,49 @@ public static class WindowsUpdateMode
                 ux.SetValue(name, name.EndsWith("StartTime", StringComparison.Ordinal) ? startText : endText, RegistryValueKind.String);
         using var status = hklm.CreateSubKey(PauseStatusPath, writable: true);
         foreach (var name in PauseStatusValues) status.SetValue(name, 1, RegistryValueKind.DWord);
+    }
+
+    static int? AuNoAutoUpdate(RegistryKey hklm)
+    {
+        using var au = hklm.OpenSubKey(PolicyPath + @"\AU");
+        return au?.GetValue("NoAutoUpdate") as int?;
+    }
+
+    static int? ServiceStart(RegistryKey hklm, string name)
+    {
+        using var key = hklm.OpenSubKey($@"{ServicesPath}\{name}");
+        return key?.GetValue("Start") as int?;
+    }
+
+    static void SetServiceStart(RegistryKey hklm, string name, int start)
+    {
+        using var key = hklm.OpenSubKey($@"{ServicesPath}\{name}", writable: true);
+        key?.SetValue("Start", start, RegistryValueKind.DWord);
+    }
+
+    /// <summary>Undoes Off: clears the no-automatic-updates policy, and when Tman set Off, puts the update services back to their saved startup types.</summary>
+    static void ClearOff(RegistryKey hklm)
+    {
+        using var marker = hklm.OpenSubKey(MarkerPath, writable: true);
+        bool wasOff = marker?.GetValue(MarkerValue) as string == OffMarker;
+
+        using (var au = hklm.OpenSubKey(PolicyPath + @"\AU", writable: true))
+        {
+            au?.DeleteValue("NoAutoUpdate", throwOnMissingValue: false);
+            au?.DeleteValue("AUOptions", throwOnMissingValue: false);
+        }
+        using (var auLeft = hklm.OpenSubKey(PolicyPath + @"\AU"))
+            if (auLeft is { ValueCount: 0, SubKeyCount: 0 }) hklm.DeleteSubKey(PolicyPath + @"\AU", throwOnMissingSubKey: false);
+
+        if (!wasOff) return;
+        var saved = (marker?.GetValue(PrevStartsValue) as string[] ?? Array.Empty<string>())
+            .Select(p => p.Split('=', 2))
+            .Where(p => p.Length == 2 && int.TryParse(p[1], out _))
+            .ToDictionary(p => p[0], p => int.Parse(p[1]), StringComparer.OrdinalIgnoreCase);
+        foreach (var s in UpdateServices)
+            SetServiceStart(hklm, s, saved.TryGetValue(s, out var start) ? start : DefaultServiceStart[s]);
+        marker?.DeleteValue(PrevStartsValue, throwOnMissingValue: false);
+        marker?.DeleteValue(MarkerValue, throwOnMissingValue: false);
     }
 
     static DateTime? RunningPauseStart(RegistryKey hklm)

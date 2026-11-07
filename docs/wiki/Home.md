@@ -30,7 +30,7 @@
 - [Getting started](Getting-Started.md): install, administrator rights, closing to the tray, where your data lives
 - [Monitoring](Monitoring.md): Summary, Performance, Processes, App history, Startup apps, Services, Power & freq, Flight recorder and the other everyday pages
 - [Diagnose](Diagnose.md): crash history, event log, disk health, devices, battery, latency, memory map and the leak monitor
-- [Tweaks](Tweaks.md): 153 Windows settings with presets, undo, export and import, and what's left out on purpose
+- [Tweaks](Tweaks.md): 157 Windows settings with presets, undo, export and import, including ones that reduce Windows' own protections
 - [Context menus](Context-Menus.md): hide, restore and add right-click entries
 - [Docker](Docker.md): containers, stacks, editing and updating, the network map, Quick deploy, template lists and the Compose editor
 - [ISO builder](ISO-Builder.md): make a smaller Windows 11 ISO and write it to USB

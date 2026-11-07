@@ -33,6 +33,12 @@ public sealed class Tweak
     /// <summary>Returns an error message, or null on success.</summary>
     public Func<bool, string?>? Apply { get; init; }
 
+    /// <summary>Runs before a change (true = turning on). A message aborts it; null lets it through. For checks like Tamper Protection.</summary>
+    public Func<bool, string?>? Before { get; init; }
+
+    /// <summary>For tweaks that only take effect after a restart: true when the saved setting differs from what's live now. Null when unknown.</summary>
+    public Func<bool?>? RestartPending { get; init; }
+
     public bool CustomNeedsAdmin { get; init; }
 
     public bool NeedsAdmin => CustomNeedsAdmin || Values.Any(v => v.Key.StartsWith(@"HKLM\") || v.Key.Contains(@"\Policies\", StringComparison.OrdinalIgnoreCase));
@@ -110,6 +116,7 @@ public static class Tweaks
         {
             try
             {
+                if (t.Before != null && t.Before(on) is { } stop) return stop;
                 if (t.Apply != null) return SetCustom(t, on);
                 if (on)
                 {
@@ -324,6 +331,7 @@ public static class Tweaks
     const string NotificationsGroup = "Notifications";
     const string UpdateGroup = "Windows Update";
     const string SecurityGroup = "Security";
+    const string ProtectionGroup = "Reduce protection";
 
     const string CurrentVersion = @"Software\Microsoft\Windows\CurrentVersion";
     const string SearchSettings = $@"{CurrentVersion}\SearchSettings";
@@ -338,6 +346,9 @@ public static class Tweaks
     const string Services = @"SYSTEM\CurrentControlSet\Services";
     const string Desktop = @"Control Panel\Desktop";
     const string GameBar = @"Software\Microsoft\GameBar";
+    const string DefenderPolicy = @"SOFTWARE\Policies\Microsoft\Windows Defender";
+    const string MemoryManagement = @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management";
+    const string MemIntegrity = @"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity";
 
     static RegStep User(string key, string name, object? on, object? off) => new($@"HKCU\{key}", name, on, off);
     static RegStep Machine(string key, string name, object? on, object? off) => new($@"HKLM\{key}", name, on, off);
@@ -387,6 +398,27 @@ public static class Tweaks
         @"\Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload",
         @"\Microsoft\Windows\Windows Error Reporting\QueueReporting",
     };
+
+    /// <summary>Whether Defender's Tamper Protection is on. It blocks every change to Defender, Tman's included. Null when it can't be read.</summary>
+    static bool? TamperProtected() =>
+        Wmi.Query("SELECT IsTamperProtected FROM MSFT_MpComputerStatus", @"root\Microsoft\Windows\Defender").FirstOrDefault()?.Bool("IsTamperProtected");
+
+    /// <summary>Whether memory integrity (HVCI) is actually running now, which can differ from the saved setting until a restart. Null when it can't be read.</summary>
+    static bool? MemoryIntegrityRunning()
+    {
+        var guard = Wmi.Query("SELECT SecurityServicesRunning FROM Win32_DeviceGuard", @"root\Microsoft\Windows\DeviceGuard").FirstOrDefault();
+        if (guard == null) return null;
+        try
+        {
+            return guard["SecurityServicesRunning"] switch
+            {
+                uint[] u => u.Contains(2u),
+                int[] i => i.Contains(2),
+                _ => null,
+            };
+        }
+        catch { return null; }
+    }
 
     public static readonly Tweak[] All =
     {
@@ -1424,6 +1456,50 @@ public static class Tweaks
             Name = "Clear the page file at shutdown",
             About = "Wipes data left in virtual memory. Shutdown can take much longer.",
             Values = new[] { Machine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "ClearPageFileAtShutdown", 1, 0) },
+        },
+
+        // Reduce protection. These lower Windows' own defences, so they're left out of every preset and each needs admin.
+        // Turning one off puts back exactly what was there before.
+        new()
+        {
+            Id = "defender-off", Group = ProtectionGroup, Effect = TweakEffect.Restart,
+            Name = "Turn off Microsoft Defender Antivirus",
+            About = "Sets the policy that turns Defender's antivirus off. It's meant for PCs that run another antivirus. Windows blocks the change while Tamper Protection is on, and real-time protection returns at the next restart unless Tamper Protection is turned off first.",
+            Values = new[] { Machine(DefenderPolicy, "DisableAntiSpyware", 1, null) },
+            Before = on => on && TamperProtected() == true
+                ? "Tamper Protection is on, so Windows won't let any app change Defender. Turn it off first in Windows Security, under Virus & threat protection > Tamper Protection, then try again."
+                : null,
+        },
+        new()
+        {
+            Id = "uac-off", Group = ProtectionGroup, Effect = TweakEffect.Restart,
+            Name = "Turn off User Account Control (UAC)",
+            About = "Stops Windows asking before changes that need administrator rights; programs then run with full rights without a prompt. Needs a restart, and some Store apps and built-in tools won't open while it's off.",
+            Values = new[] { Machine(SystemPolicies, "EnableLUA", 0, 1) },
+        },
+        new()
+        {
+            Id = "memory-integrity-off", Group = ProtectionGroup, Effect = TweakEffect.Restart,
+            Name = "Turn off Core Isolation memory integrity",
+            About = "Turns off the check that kernel drivers must pass before they load, also called HVCI. Needs a restart to take effect. Turn it off only when an older driver or app won't work with it on.",
+            Values = new[] { Machine(MemIntegrity, "Enabled", 0, 1) },
+            RestartPending = () =>
+            {
+                if (MemoryIntegrityRunning() is not { } running) return null;
+                bool configuredOff = Get($@"HKLM\{MemIntegrity}", "Enabled") is 0;
+                return configuredOff == running;
+            },
+        },
+        new()
+        {
+            Id = "spectre-off", Group = ProtectionGroup, Effect = TweakEffect.Restart,
+            Name = "Turn off Spectre and Meltdown protections",
+            About = "Removes the CPU side-channel mitigations for Spectre variant 2 and Meltdown. Needs a restart. It can speed up some older processors, and it leaves the PC open to those attacks.",
+            Values = new[]
+            {
+                Machine(MemoryManagement, "FeatureSettingsOverride", 3, null),
+                Machine(MemoryManagement, "FeatureSettingsOverrideMask", 3, null),
+            },
         },
 
         // System

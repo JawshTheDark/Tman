@@ -156,11 +156,14 @@
                                     <ComboBoxItem Content="4 weeks" />
                                     <ComboBoxItem Content="5 weeks" />
                                 </ComboBox>
+                                <RadioButton x:Name="PickOff" GroupName="UpdateMode" Content="Off" MinWidth="0" Click="Pick_Click" />
+                                <TextBlock Style="{StaticResource Subtle}" Margin="28,0,0,8" TextWrapping="Wrap"
+                                           Text="Disables the update services and sets a policy so Windows stops downloading and installing updates, security fixes included. A restart is needed, and switching back to Default puts the services back exactly as they were." />
                                 <Button x:Name="SwitchButton" Content="Switch mode" HorizontalAlignment="Left" IsEnabled="False" Click="Switch_Click" />
                             </StackPanel>
                         </Border>
                         <TextBlock Style="{StaticResource Subtle}" Margin="0,10,0,0" TextWrapping="Wrap"
-                                   Text="Tman has no option to turn updates off, on purpose. A PC that stops updating soon has known security holes." />
+                                   Text="Off and Pause stop security updates, so the PC keeps any security holes they would fix until you switch back to Default. Switching mode needs administrator rights." />
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

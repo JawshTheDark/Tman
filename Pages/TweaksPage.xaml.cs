@@ -26,6 +26,7 @@ public sealed class TweakItem : ObservableObject
 
     TweakState _state = TweakState.Unknown;
     bool _changed;
+    bool _restartPending;
 
     public TweakState State => _state;
     public bool Changed => _changed;
@@ -54,6 +55,7 @@ public sealed class TweakItem : ObservableObject
         {
             if (_state == TweakState.Locked) yield return "Set by policy";
             if (_state == TweakState.Partly) yield return "Partly on";
+            if (_restartPending) yield return "Restart pending";
             if (_changed) yield return "Changed by Tman";
             if (Tweak.NeedsAdmin) yield return "Admin";
             if (Tweak.Effect == TweakEffect.Explorer) yield return "Explorer restart";
@@ -62,10 +64,11 @@ public sealed class TweakItem : ObservableObject
         }
     }
 
-    public void Update(TweakState state, bool changed)
+    public void Update(TweakState state, bool changed, bool restartPending)
     {
         _state = state;
         _changed = changed;
+        _restartPending = restartPending;
         Raise(nameof(IsOn));
         Raise(nameof(CanChange));
         Raise(nameof(LockReason));
@@ -127,8 +130,8 @@ public partial class TweaksPage : UserControl, IPage
 
     async Task Reload()
     {
-        var states = await Task.Run(() => _items.Select(i => (Item: i, State: Tweaks.Read(i.Tweak), Changed: Tweaks.HasUndo(i.Tweak))).ToList());
-        foreach (var (item, state, changed) in states) item.Update(state, changed);
+        var states = await Task.Run(() => _items.Select(i => (Item: i, State: Tweaks.Read(i.Tweak), Changed: Tweaks.HasUndo(i.Tweak), Pending: i.Tweak.RestartPending?.Invoke() == true)).ToList());
+        foreach (var (item, state, changed, pending) in states) item.Update(state, changed, pending);
         // Rebuilding every row is slow, and only these filters depend on a tweak's state.
         if (ShowFilter.SelectedIndex != 0) _view.Refresh();
         UpdateCount();
