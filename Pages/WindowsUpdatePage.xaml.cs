@@ -52,6 +52,9 @@ public partial class WindowsUpdatePage : UserControl, IPage
 
     public void OnHidden() => _searchTimer.Stop();
 
+    /// <summary>Dev aid for --snap: shows a tab by index (0 History, 1 Pending, 2 Update mode).</summary>
+    public void ShowTab(int index) => Tabs.SelectedIndex = index;
+
     // ---- History ----
 
     async void LoadHistory()
@@ -240,6 +243,7 @@ public partial class WindowsUpdatePage : UserControl, IPage
         PickDefault.IsChecked = mode.Mode == UpdateMode.Default;
         PickSecurity.IsChecked = mode.Mode == UpdateMode.Security;
         PickPause.IsChecked = mode.Mode == UpdateMode.Paused;
+        PickOff.IsChecked = mode.Mode == UpdateMode.Off;
         UpdateSwitch();
     }
 
@@ -249,7 +253,7 @@ public partial class WindowsUpdatePage : UserControl, IPage
     {
         PauseWeeks.IsEnabled = PickPause.IsChecked == true;
         // Reapplying the current mode is allowed: Default then also clears a stale, expired pause.
-        SwitchButton.IsEnabled = MainWindow.IsAdmin && _mode != null && (PickDefault.IsChecked == true || PickSecurity.IsChecked == true || PickPause.IsChecked == true);
+        SwitchButton.IsEnabled = MainWindow.IsAdmin && _mode != null && (PickDefault.IsChecked == true || PickSecurity.IsChecked == true || PickPause.IsChecked == true || PickOff.IsChecked == true);
     }
 
     async void Switch_Click(object sender, RoutedEventArgs e)
@@ -270,6 +274,12 @@ public partial class WindowsUpdatePage : UserControl, IPage
             change = () => WindowsUpdateMode.Pause(weeks);
             summary = $"Pause Windows Update until {until:f}?\n\nThis uses Windows' own pause setting, and any deferral policies Tman or anyone else set here are removed. Updates start again by themselves on that date.\n\n"
                 + "What could go wrong: no updates install until then, not even security fixes, so the PC stays open to anything they would have fixed.";
+        }
+        else if (PickOff.IsChecked == true)
+        {
+            change = WindowsUpdateMode.SetOff;
+            summary = "Turn Windows Update off?\n\nThis disables the update services (wuauserv, UsoSvc and BITS) and sets a policy that stops automatic updates, security fixes included. A restart is needed to stop updates already under way.\n\n"
+                + "What could go wrong: no updates install at all until you switch back to Default, so the PC stays open to anything they would fix. Windows' repair service may turn the services back on by itself; the policy is the part that reliably holds.";
         }
         else
         {

@@ -62,11 +62,11 @@ Windows keeps its tools in a dozen places: Task Manager, Resource Monitor, Devic
     <td align="center"><sub>Memory map: in use, modified, standby, free and reserved, with a plain line for each</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/tweaks.png" alt="Tweaks: 153 Windows settings showing their live value, with presets, undo, export and import"></td>
+    <td width="50%"><img src="docs/images/tweaks.png" alt="Tweaks: 157 Windows settings showing their live value, with presets, undo, export and import"></td>
     <td width="50%"><img src="docs/images/docker-quick.png" alt="Docker Quick deploy: a gallery of about 840 self-hosted apps with icons, merged from several template lists"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Tweaks: 153 settings with their live value, presets that make a restore point first, and undo</sub></td>
+    <td align="center"><sub>Tweaks: 157 settings with their live value, presets that make a restore point first, and undo</sub></td>
     <td align="center"><sub>Docker Quick deploy: about 840 apps with icons, a form and the exact command before anything runs</sub></td>
   </tr>
 </table>
@@ -109,14 +109,15 @@ Windows keeps its tools in a dozen places: Task Manager, Resource Monitor, Devic
 
 ### Admin
 
-- **Tweaks**: 153 settings for privacy, AI features, ads, Explorer, the taskbar, Windows Update, security and more, each showing its live value; Minimal, Standard and Advanced presets that create a restore point first; undo, export and import
+- **Tweaks**: 157 settings for privacy, AI features, ads, Explorer, the taskbar, Windows Update, security and more, each showing its live value; Minimal, Standard and Advanced presets that create a restore point first; undo, export and import
 - **Context menus**: every right-click entry, who added it and what it runs; hide, restore, keep for Shift + right-click, or add your own
 - **Get apps**: a bulk installer on winget, with 120 popular apps by category, a live catalog search, updates, and removal of built-in Store apps
 - **ISO builder**: turns an official Windows 11 ISO into a smaller one, with an answer file that skips the Microsoft account, and writes it to USB
 - **Windows features**, including OpenSSH client and server
 - **Control panels**: the classic tools that are hard to find now, grouped by purpose
 - **Scheduled tasks** with last results in plain words
-- **Windows Update**: history with failures explained, and Default, Security-focused or Pause modes. There is no off switch, on purpose
+- **Windows Update**: history with failures explained, and Default, Security-focused, Pause or Off modes, each showing the live value and what any policy set by someone else does
+- **Registry cleaner**: scans well-defined places (uninstall entries, App Paths, Run keys, file associations, shared DLLs) for entries whose target file is gone; shows each with what it points at and why, removes only what you tick, and writes a one-click `.reg` backup first
 - **Accounts**, **Environment** with a PATH editor that flags missing folders and duplicates, and **Shared folders**
 
 </td>
@@ -219,7 +220,7 @@ The `--snap` flag renders any page to a PNG off-screen, which is how the screens
 | [Getting started](docs/wiki/Getting-Started.md) | Install, administrator rights, the tray, where your data lives |
 | [Monitoring](docs/wiki/Monitoring.md) | Summary, Performance, Processes and the other everyday pages |
 | [Diagnose](docs/wiki/Diagnose.md) | Crash history, event log, disk health, devices, battery, latency, memory map, leak monitor |
-| [Tweaks](docs/wiki/Tweaks.md) | The 153 settings, presets, undo, and what's left out on purpose |
+| [Tweaks](docs/wiki/Tweaks.md) | The 157 settings, presets, undo, and the ones that reduce protection |
 | [Context menus](docs/wiki/Context-Menus.md) | Hiding, restoring and adding right-click entries |
 | [Docker](docs/wiki/Docker.md) | Containers, stacks, editing, updates, Quick deploy, template lists, the Compose editor |
 | [ISO builder](docs/wiki/ISO-Builder.md) | Making a smaller Windows 11 ISO and writing it to USB |
