@@ -143,6 +143,7 @@ Windows keeps its tools in a dozen places: Task Manager, Resource Monitor, Devic
 ### Network and repair
 
 - **Firewall**: profiles and every rule, with filters for direction, action, state and non-Microsoft rules
+- **App firewall**: every app that talks to the network, with the domain names it asked for, bytes and a verdict; allow or block per app, per domain, per address, port and direction, enforced through the Windows Filtering Platform with no driver or service; PC-wide blocklists (OISD, Hagezi, StevenBlack, editable) written into the hosts file so they hold when Tman is closed; an optional prompt for new apps; a searchable history with CSV export; and one button that removes every filter Tman added
 - **Network tools**: live ping and traceroute, DNS lookup, adapter details, DNS provider switching (Cloudflare, Google, Quad9 or your own), flush DNS, restart adapter, saved Wi-Fi names
 - **Hosts file** editor that keeps comments and order, backs up before each save, and flags entries that redirect well-known sites
 - **Security** board: antivirus, firewall, Secure Boot, TPM, memory integrity, BitLocker, UAC, Smart App Control, SmartScreen and Remote Desktop, with what each state means
@@ -206,7 +207,8 @@ The `--snap` flag renders any page to a PNG off-screen, which is how the screens
 | --- | --- |
 | Processes | One `NtQuerySystemInformation` call gives CPU time, memory, I/O and thread state for every process, protected ones included, without opening handles |
 | Counters | PDH: `% Processor Utility` for CPU (the same counter as Task Manager), `Actual Frequency` and `% Performance Limit` per processor, `Energy Meter` for power; DXGI for GPU names and memory, NVML for NVIDIA sensors |
-| Traces | ETW kernel traces for the latency capture and the per-process network column |
+| Traces | ETW kernel traces for the latency capture and the per-process network column; the App firewall listens to the Kernel-Network and DNS-Client providers to pair each connection with the name the app asked for |
+| App firewall | Windows Filtering Platform filters at the connection-authorisation layers under Tman's own provider and sublayer (persistent, so rules hold while Tman is closed); the engine's own drop events give the Blocked verdicts; blocklists go into the hosts file |
 | Hardware | WMI, loaded once in the background |
 | Hyper-V | WMI (`Msvm_*` classes) for machines and checkpoints; the console uses the same Remote Desktop connection as `vmconnect` |
 | Docker | The `docker` command line with argument lists, never a shell; template values are treated as untrusted |
@@ -226,7 +228,7 @@ The `--snap` flag renders any page to a PNG off-screen, which is how the screens
 | [ISO builder](docs/wiki/ISO-Builder.md) | Making a smaller Windows 11 ISO and writing it to USB |
 | [Hyper-V](docs/wiki/Hyper-V.md) | Virtual machines, checkpoints, New VM, the console |
 | [Other admin tools](docs/wiki/Admin-Tools.md) | Get apps, Windows features, control panels, scheduled tasks, Windows Update, accounts, environment, shares |
-| [Network](docs/wiki/Network.md) | Firewall, network tools, hosts file, the security board |
+| [Network](docs/wiki/Network.md) | Firewall, App firewall, network tools, hosts file, the security board |
 | [Repair](docs/wiki/Repair.md) | System repair and restore points |
 | [Tray icon](docs/wiki/Tray-Icon.md) | Metrics, styles, the flyout and visibility |
 | [Testing status](docs/wiki/Testing-Status.md) | What has been proven and what hasn't |

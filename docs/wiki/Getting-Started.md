@@ -33,9 +33,10 @@ Everything Tman saves is in `%APPDATA%\Tman\`. Delete the folder and Tman starts
 | `leak-history.json`, `leak-scans.txt` | The leak monitor's samples since the last restart, and the scan log |
 | `tweaks-undo.json` | The old value of every tweak Tman changed, so Undo puts back exactly what was there |
 | `backups\` | Dated copies of the hosts file and environment variables from before each change |
+| `app-firewall.json`, `app-firewall-history.json`, `blocklists\` | The App firewall's rules and settings, its connection history, and the downloaded blocklists |
 | `docker-templates\`, `docker-icons\` | Saved template lists and app icons for Quick deploy |
 | `docker-my-templates.json`, `docker-stacks\`, `docker-map.json` | Your own templates, each deployed stack's Compose file, and where you moved the boxes on the network map |
 | `iso-build.json`, `iso-cleanup.log` | The ISO builder's work folder while a build runs, and any cleanup done after Tman was gone |
 | `errors.log` | Unexpected errors, worth attaching to a bug report |
 
-Nothing is sent anywhere. The leak scan log names apps and drivers but not your user name, PC name or file paths.
+Nothing is sent anywhere, apart from the App firewall's blocklist downloads, which go only to the https addresses on its Blocklists tab. The leak scan log names apps and drivers but not your user name, PC name or file paths.

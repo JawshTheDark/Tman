@@ -43,6 +43,7 @@ public partial class App : Application
         FlightRecorder.Instance.Start();
         LeakRecorder.Instance.Start();
         SystemMonitor.Instance.Start(Dispatcher);
+        AppFirewall.Instance.StartIfWanted();
         StaticInfo.LoadAsync(Dispatcher);
         // A build that lost its power as well as its process leaves only the journal to go on.
         if (Tman.MainWindow.IsAdmin && IsoBuilder.Leftover() != null) _ = Task.Run(() => IsoBuilder.RecoverAsync(_ => { }));
@@ -69,6 +70,7 @@ public partial class App : Application
         Settings.Current.Save();
         AppUsage.Instance.Save();
         LeakRecorder.Instance.Save();
+        AppFirewall.Instance.Save();
     }
 
     static void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)

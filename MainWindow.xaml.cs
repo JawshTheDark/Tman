@@ -74,6 +74,7 @@ public partial class MainWindow : Window
             new NavEntry("docker", "", "Docker", () => new DockerPage()),
             "NETWORK",
             new NavEntry("firewall", "", "Firewall", () => new FirewallPage()),
+            new NavEntry("appfirewall", "", "App firewall", () => new AppFirewallPage()),
             new NavEntry("nettools", "", "Network tools", () => new NetworkToolsPage()),
             new NavEntry("hosts", "", "Hosts file", () => new HostsPage()),
             new NavEntry("security", "", "Security", () => new SecurityPage()),
@@ -393,10 +394,11 @@ public partial class MainWindow : Window
             if (extra != null && _current is LatencyPage latency) await latency.RunCaptureAsync(int.Parse(extra));
             if (extra != null && _current is DockerPage docker) docker.ShowTab(int.Parse(extra));
             if (extra != null && _current is WindowsUpdatePage wup) wup.ShowTab(int.Parse(extra));
+            if (extra != null && _current is AppFirewallPage appFirewall) appFirewall.ShowTab(int.Parse(extra));
             if (extra == "sample" && _current is LeakMonitorPage leaks) await leaks.ShowSample();
             if (extra != null && _current is IsoBuilderPage iso) await iso.LoadIsoAsync(extra);
             await Task.Delay(((NavEntry)item.Tag).Key is "drivers" or "disk" or "apps" or "services" or "startup" or "processes"
-                or "crashes" or "events" or "health" or "devices" or "tasks" or "updates" or "accounts" or "shares" or "docker" or "firewall" or "security" or "restore" or "getapps" or "features" or "regclean" ? 8000 : 2500);
+                or "crashes" or "events" or "health" or "devices" or "tasks" or "updates" or "accounts" or "shares" or "docker" or "firewall" or "appfirewall" or "security" or "restore" or "getapps" or "features" or "regclean" ? 8000 : 2500);
             var key = ((NavEntry)item.Tag).Key;
             SavePng((FrameworkElement)Content, Path.Combine(dir, key + ".png"));
             // Scrolling pages also get a capture of their whole content, below-the-fold included.

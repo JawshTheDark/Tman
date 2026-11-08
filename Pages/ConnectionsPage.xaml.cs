@@ -173,7 +173,8 @@ public partial class ConnectionsPage : UserControl, IPage
     const int AF_INET = 2, AF_INET6 = 23;
     const int TCP_TABLE_OWNER_PID_ALL = 5, UDP_TABLE_OWNER_PID = 1;
 
-    static List<ConnectionItem> ReadAll()
+    /// <summary>Every TCP and UDP endpoint Windows knows about right now, with the owning process. Also feeds the App firewall page for a standard user.</summary>
+    internal static List<ConnectionItem> ReadAll()
     {
         var list = new List<ConnectionItem>();
         try

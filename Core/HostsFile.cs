@@ -190,6 +190,17 @@ public sealed class HostsFile
         return line;
     }
 
+    /// <summary>Adds a comment line at the end. Text without a leading # gets one.</summary>
+    public HostsLine AddComment(string text)
+    {
+        var last = Lines.LastOrDefault();
+        var eol = last == null ? Eol : last.Eol;
+        if (last != null && last.Eol.Length == 0) last.Eol = Eol;
+        var line = Classify(new HostsLine { Text = text.StartsWith('#') ? text : "# " + text, Eol = eol });
+        Lines.Add(line);
+        return line;
+    }
+
     public void Update(HostsLine line, string ip, string hosts, string comment)
     {
         line.Text = (line.Enabled ? "" : "# ") + Format(ip, hosts, comment);

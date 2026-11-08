@@ -15,9 +15,11 @@ public sealed class EtwFailure : Exception
 [StructLayout(LayoutKind.Explicit, Size = 112)]
 internal unsafe struct EtwEvent
 {
+    [FieldOffset(12)] public uint ProcessId;
     [FieldOffset(16)] public long TimeStamp;
     [FieldOffset(24)] public Guid ProviderId;
     [FieldOffset(40)] public ushort Id;
+    [FieldOffset(42)] public byte Version;
     [FieldOffset(45)] public byte Opcode;
     [FieldOffset(80)] public byte Processor;
     [FieldOffset(86)] public ushort UserDataLength;
@@ -106,6 +108,7 @@ internal sealed unsafe class EtwTrace
     LogFile* _logFile;
     IntPtr _nameText;
     ulong _consumer = InvalidConsumer;
+    ulong _session;
     Thread? _thread;
     volatile bool _sessionOpen;
     int _stopRequested;
@@ -150,6 +153,14 @@ internal sealed unsafe class EtwTrace
             p->MaximumBuffers = 64;
         }, provider, keywords);
 
+    /// <summary>Adds a manifest provider to a running session, so one consumer thread can hear several providers.</summary>
+    public void Enable(Guid provider, ulong keywords)
+    {
+        if (!_sessionOpen) throw new EtwFailure("The trace session isn't open.");
+        uint status = EnableTraceEx2(_session, provider, EnableProvider, LevelInformation, keywords, 0, 0, null);
+        if (status != 0) throw new EtwFailure(Describe(status));
+    }
+
     delegate void Configure(Properties* p);
 
     static EtwTrace Start(string kind, EtwHandler onEvent, Configure configure, Guid? provider, ulong keywords)
@@ -184,12 +195,9 @@ internal sealed unsafe class EtwTrace
         }
         if (status != 0) throw new EtwFailure(Describe(status));
         _sessionOpen = true;
+        _session = session;
 
-        if (provider is { } guid)
-        {
-            status = EnableTraceEx2(session, guid, EnableProvider, LevelInformation, keywords, 0, 0, null);
-            if (status != 0) throw new EtwFailure(Describe(status));
-        }
+        if (provider is { } guid) Enable(guid, keywords);
 
         _context = GCHandle.Alloc(this);
         _nameText = Marshal.StringToHGlobalUni(_name);

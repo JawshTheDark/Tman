@@ -13,6 +13,7 @@ Tman 0.2.0 is a pre-release. This page says plainly what has and hasn't been pro
 - One running copy, using real processes.
 - The leak detector, on synthetic curves and a process that really leaks.
 - The ISO builder: a full build from a Windows 11 build 26300 ISO, a USB write, and an install of the result in a Hyper-V VM under Secure Boot that reached the desktop on a local account with no network.
+- The App firewall, elevated on the dev PC: a Block rule for `curl.exe` made `curl https://example.com` fail and removing it made the same command work again; the live view named `curl.exe` and showed `example.com` on port 443 from the DNS trace, with bytes both ways; a short-lived `nslookup.exe` was named through the process trace; Blocked verdicts and history came through Windows security auditing; Remove all Tman filters left `netsh wfp show filters` and `netsh wfp show state` with no Tman entries and no trace session behind. The three default blocklists (61k, 88k and 78k names) downloaded and parsed; the merged 200k names were written into the real hosts file (4 MB, under a second), after which a listed name resolved to no address while www.microsoft.com still resolved, and removing the section left the hosts file byte-for-byte what it was, with a dated backup of each step. Every tab rendered as a standard user and as administrator.
 
 ## Tested only with stand-ins
 
@@ -24,6 +25,8 @@ Tman 0.2.0 is a pre-release. This page says plainly what has and hasn't been pro
 | Battery | Sample data | A real battery |
 | Blue screen parsing | Made-up events | A real crash |
 | SATA, USB and RAID disk health | Sample data | Real drives |
+| App firewall drop events from the filter engine | Not testable on the dev PC: its filter engine returns "path not found" for net events, and `netsh wfp show netevents` fails the same way, so the auditing fallback was what got tested | A PC whose engine reports refused connections |
+| App firewall prompt mode | The card's layout and timeout logic | A real first connection with prompt mode on |
 
 ## Not run for real yet
 
