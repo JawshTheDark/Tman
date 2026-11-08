@@ -21,6 +21,7 @@
 | Run a virtual machine | [Hyper-V](Hyper-V.md) |
 | Install many apps at once, or change Windows features | [Other admin tools](Admin-Tools.md) |
 | Fix the network, DNS or the hosts file | [Network](Network.md) |
+| See which apps talk to the internet, and block some of it | [Network](Network.md#app-firewall) |
 | Repair Windows or make a restore point | [Repair](Repair.md) |
 | Keep an eye on things from the taskbar | [Tray icon](Tray-Icon.md) |
 | Build it myself | [Building Tman](Building.md) |
@@ -36,7 +37,7 @@
 - [ISO builder](ISO-Builder.md): make a smaller Windows 11 ISO and write it to USB
 - [Hyper-V](Hyper-V.md): virtual machines, checkpoints, New VM and the built-in console
 - [Other admin tools](Admin-Tools.md): Get apps, Windows features, control panels, scheduled tasks, Windows Update, accounts, environment variables and shared folders
-- [Network](Network.md): firewall, network tools, hosts file and the security board
+- [Network](Network.md): firewall, the App firewall with its rules, blocklists and history, network tools, hosts file and the security board
 - [Repair](Repair.md): system repair and restore points
 - [Tray icon](Tray-Icon.md): the live icon, the flyout and separate icons
 

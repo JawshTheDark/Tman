@@ -30,6 +30,7 @@ Settings, app history and benchmark results live in `%APPDATA%\Tman\` (`settings
   - File locks: a path or name to search for.
   - Performance: a device key prefix to select, e.g. `gpu`.
   - ISO builder: an ISO to read first.
+  - App firewall: a tab number (0 apps, 1 rules, 2 blocklists, 3 history).
   - Hyper-V: `sample` fills the page with made-up machines, for checking the layout on a PC without Hyper-V, and `sample output` adds the job panel.
 - `--size <w>x<h>` after `--snap` sets the window size for the render, e.g. `--size 820x520`.
 - `--snap <dir> tray` renders every tray icon in both styles at each tray size into `tray-sheet.png`, briefly registers live icons to check the shell accepts them, and renders the settings dialog.
